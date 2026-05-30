@@ -1,0 +1,161 @@
+// Evaluador de cadenas Hydra: conecta el código compilado con el runtime de hydra-synth
+
+export interface HydraEvaluatorOptions {
+  onError?: (message: string) => void
+  onSuccess?: () => void
+}
+
+export interface HydraEvaluator {
+  /** Ejecuta un string de código Hydra en el canvas asociado */
+  run: (code: string, structural?: boolean) => void
+  /** Silencia el canvas */
+  hush: () => void
+  /** Libera el engine (llamar en cleanup) */
+  dispose: () => void
+  /** Indica si el engine fue inicializado */
+  readonly ready: boolean
+}
+
+/** Construye el objeto de funciones vinculadas al synth (whitelist del playground existente) */
+function buildBoundFunctions(s: any): Record<string, unknown> {
+  return {
+    osc: s.osc?.bind(s),
+    noise: s.noise?.bind(s),
+    voronoi: s.voronoi?.bind(s),
+    shape: s.shape?.bind(s),
+    gradient: s.gradient?.bind(s),
+    src: s.src?.bind(s),
+    solid: s.solid?.bind(s),
+    rotate: s.rotate?.bind(s),
+    scale: s.scale?.bind(s),
+    pixelate: s.pixelate?.bind(s),
+    repeat: s.repeat?.bind(s),
+    repeatX: s.repeatX?.bind(s),
+    repeatY: s.repeatY?.bind(s),
+    kaleid: s.kaleid?.bind(s),
+    scroll: s.scroll?.bind(s),
+    scrollX: s.scrollX?.bind(s),
+    scrollY: s.scrollY?.bind(s),
+    modulateRotate: s.modulateRotate?.bind(s),
+    modulateScale: s.modulateScale?.bind(s),
+    modulate: s.modulate?.bind(s),
+    modulateHue: s.modulateHue?.bind(s),
+    modulatePixelate: s.modulatePixelate?.bind(s),
+    modulateRepeat: s.modulateRepeat?.bind(s),
+    modulateRepeatX: s.modulateRepeatX?.bind(s),
+    modulateRepeatY: s.modulateRepeatY?.bind(s),
+    modulateKaleid: s.modulateKaleid?.bind(s),
+    modulateScrollX: s.modulateScrollX?.bind(s),
+    modulateScrollY: s.modulateScrollY?.bind(s),
+    add: s.add?.bind(s),
+    sub: s.sub?.bind(s),
+    layer: s.layer?.bind(s),
+    blend: s.blend?.bind(s),
+    mult: s.mult?.bind(s),
+    diff: s.diff?.bind(s),
+    brightness: s.brightness?.bind(s),
+    contrast: s.contrast?.bind(s),
+    color: s.color?.bind(s),
+    colorama: s.colorama?.bind(s),
+    sum: s.sum?.bind(s),
+    r: s.r?.bind(s),
+    g: s.g?.bind(s),
+    b: s.b?.bind(s),
+    invert: s.invert?.bind(s),
+    luma: s.luma?.bind(s),
+    thresh: s.thresh?.bind(s),
+    posterize: s.posterize?.bind(s),
+    shift: s.shift?.bind(s),
+    saturate: s.saturate?.bind(s),
+    hue: s.hue?.bind(s),
+    out: s.out?.bind(s),
+    render: s.render?.bind(s),
+    o0: s.o0,
+    o1: s.o1,
+    o2: s.o2,
+    o3: s.o3,
+    s0: s.s0,
+    s1: s.s1,
+    s2: s.s2,
+    s3: s.s3,
+    speed: s.speed,
+    bpm: s.bpm,
+    width: s.width,
+    height: s.height,
+    time: s.time,
+    mouse: s.mouse,
+    setResolution: s.setResolution?.bind(s),
+    hush: s.hush?.bind(s),
+    setFunction: s.setFunction?.bind(s),
+  }
+}
+
+/**
+ * Crea un evaluador de cadenas Hydra vinculado a un canvas.
+ * Retorna null si el canvas no está disponible.
+ */
+export async function createHydraEvaluator(
+  canvas: HTMLCanvasElement,
+  options: HydraEvaluatorOptions = {}
+): Promise<HydraEvaluator> {
+  const { onError, onSuccess } = options
+
+  const HydraSynth = (await import("hydra-synth")).default
+
+  const hydra = new HydraSynth({
+    canvas,
+    detectAudio: false,
+    enableStreamCapture: false,
+    makeGlobal: false,
+  })
+
+  const synth = hydra.synth
+  let _ready = true
+
+  const run = (code: string, structural = false) => {
+    if (!_ready) return
+
+    try {
+      // hush solo en cambios estructurales (nuevo pad activado/desactivado)
+      // no en ajustes de parámetros, para transiciones suaves
+      if (structural) {
+        synth.hush()
+      }
+
+      const bound = buildBoundFunctions(synth)
+      const evalFn = new Function(...Object.keys(bound), `return (${code})`)
+      const result = evalFn(...Object.values(bound))
+
+      if (result && typeof result.out === "function") {
+        result.out()
+      }
+
+      onSuccess?.()
+    } catch (err: any) {
+      console.error("[launchpad] Hydra eval error:", err)
+      onError?.(err.message ?? "Invalid Hydra expression")
+    }
+  }
+
+  const hush = () => {
+    if (_ready) synth.hush()
+  }
+
+  const dispose = () => {
+    _ready = false
+    try {
+      synth.hush()
+    } catch {
+      // ignorar errores en cleanup
+    }
+  }
+
+  return {
+    run,
+    hush,
+    dispose,
+    get ready() {
+      return _ready
+    },
+  }
+}
