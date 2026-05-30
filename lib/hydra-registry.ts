@@ -222,6 +222,11 @@ export function getFunctionDef(id: string): HydraFunctionDef | undefined {
   return HYDRA_REGISTRY.find((fn) => fn.id === id)
 }
 
+/** Retorna todas las funciones fuente disponibles como opciones para fuente secundaria */
+export function getSourceOptions(): HydraFunctionDef[] {
+  return HYDRA_REGISTRY.filter((fn) => fn.category === "source")
+}
+
 /** Obtiene los valores por defecto de los parámetros de una función */
 export function getDefaultParams(def: HydraFunctionDef): Record<string, number> {
   return Object.fromEntries(def.params.map((p) => [p.name, p.default]))

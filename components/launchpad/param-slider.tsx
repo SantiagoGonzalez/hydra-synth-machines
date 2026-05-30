@@ -4,7 +4,7 @@
 
 import { useCallback, useRef } from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
-import { CATEGORY_COLORS, getFunctionDef, type HydraParam } from "@/lib/hydra-registry"
+import { CATEGORY_COLORS, getFunctionDef, getSourceOptions, type HydraParam } from "@/lib/hydra-registry"
 import { useChainStore, type ActivePad } from "@/stores/chain-store"
 import { cn } from "@/lib/utils"
 
@@ -82,9 +82,17 @@ interface PadParamPanelProps {
 /** Panel de parámetros para un pad activo concreto */
 export function PadParamPanel({ pad }: PadParamPanelProps) {
   const updateParam = useChainStore((s) => s.updateParam)
+  const updateSecondarySource = useChainStore((s) => s.updateSecondarySource)
+  const updateSecondaryParam = useChainStore((s) => s.updateSecondaryParam)
   const def = getFunctionDef(pad.functionId)
 
-  if (!def || def.params.length === 0) {
+  if (!def) return null
+
+  const hasMainParams = def.params.length > 0
+  const hasSecondary = !!def.secondarySourceId
+  const selectedSourceId = pad.secondarySourceId ?? def.secondarySourceId
+
+  if (!hasMainParams && !hasSecondary) {
     return (
       <div className="flex items-center justify-center h-12 text-white/20 font-mono text-[10px]">
         no params
@@ -92,27 +100,85 @@ export function PadParamPanel({ pad }: PadParamPanelProps) {
     )
   }
 
-  const color = CATEGORY_COLORS[pad.category]
+  const mainColor = CATEGORY_COLORS[pad.category]
+  // Color de fuente secundaria — categoria source
+  const sourceColor = CATEGORY_COLORS["source"]
+  const sourceOptions = getSourceOptions()
+  const selectedSecDef = selectedSourceId ? getFunctionDef(selectedSourceId) : undefined
 
   return (
-    <div className="flex flex-col gap-1">
-      <span
-        className="font-mono text-[10px] font-semibold mb-1"
-        style={{ color }}
-      >
+    <div className="flex flex-col gap-2">
+      <span className="font-mono text-[10px] font-semibold" style={{ color: mainColor }}>
         {def.label}
       </span>
-      <div className="flex gap-3 items-end">
-        {def.params.map((param) => (
-          <SingleParamSlider
-            key={param.name}
-            param={param}
-            value={pad.params[param.name] ?? param.default}
-            color={color}
-            onChange={(val) => updateParam(pad.instanceId, param.name, val)}
-          />
-        ))}
-      </div>
+
+      {/* Parámetros principales del pad */}
+      {hasMainParams && (
+        <div className="flex gap-3 items-end">
+          {def.params.map((param) => (
+            <SingleParamSlider
+              key={param.name}
+              param={param}
+              value={pad.params[param.name] ?? param.default}
+              color={mainColor}
+              onChange={(val) => updateParam(pad.instanceId, param.name, val)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Selector de fuente secundaria + sus parámetros */}
+      {hasSecondary && (
+        <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/10">
+          <span className="font-mono text-[9px] text-white/30 uppercase tracking-wider">
+            source
+          </span>
+          {/* Botones de selección de fuente */}
+          <div className="flex gap-1 flex-wrap">
+            {sourceOptions.map((src) => {
+              const isSelected = src.id === selectedSourceId
+              return (
+                <button
+                  key={src.id}
+                  onClick={() => updateSecondarySource(pad.instanceId, src.id)}
+                  className={cn(
+                    "font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors"
+                  )}
+                  style={
+                    isSelected
+                      ? {
+                          borderColor: sourceColor,
+                          color: sourceColor,
+                          backgroundColor: `${sourceColor}22`,
+                        }
+                      : {
+                          borderColor: "rgba(255,255,255,0.1)",
+                          color: "rgba(255,255,255,0.25)",
+                        }
+                  }
+                >
+                  {src.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Sliders de parámetros de la fuente secundaria seleccionada */}
+          {selectedSecDef && selectedSecDef.params.length > 0 && (
+            <div className="flex gap-3 items-end mt-0.5">
+              {selectedSecDef.params.map((param) => (
+                <SingleParamSlider
+                  key={param.name}
+                  param={param}
+                  value={pad.secondaryParams?.[param.name] ?? param.default}
+                  color={`${sourceColor}99`}
+                  onChange={(val) => updateSecondaryParam(pad.instanceId, param.name, val)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

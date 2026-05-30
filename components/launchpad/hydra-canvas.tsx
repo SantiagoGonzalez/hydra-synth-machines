@@ -3,8 +3,9 @@
 // Canvas WebGL aislado para el launchpad: inicializa hydra-synth y reevalúa la cadena compilada
 
 import { useRef, useEffect, useState, useCallback } from "react"
-import { Maximize2, AlertCircle } from "lucide-react"
+import { Maximize2, AlertCircle, Pin, Heart } from "lucide-react"
 import { useChainStore } from "@/stores/chain-store"
+import { useFavoritesStore } from "@/stores/favorites-store"
 import { createHydraEvaluator, type HydraEvaluator } from "@/lib/chain-evaluator"
 import { cn } from "@/lib/utils"
 
@@ -18,11 +19,14 @@ export function HydraCanvas() {
   const [error, setError] = useState<string | null>(null)
   const [isFlashing, setIsFlashing] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isSticky, setIsSticky] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
 
   const compiledCode = useChainStore((s) => s.compiledCode)
   const activePads = useChainStore((s) => s.activePads)
   const markSafeCode = useChainStore((s) => s.markSafeCode)
   const lastSafeCode = useChainStore((s) => s.lastSafeCode)
+  const saveFavorite = useFavoritesStore((s) => s.saveFavorite)
 
   // Inicialización del engine hydra-synth
   useEffect(() => {
@@ -78,6 +82,15 @@ export function HydraCanvas() {
     evaluatorRef.current?.run(lastSafeCode, true)
   }, [lastSafeCode])
 
+  // Captura el canvas como imagen y guarda la cadena actual en favoritos
+  const handleSaveToFavorites = useCallback(() => {
+    if (!canvasRef.current) return
+    const thumbnailDataUrl = canvasRef.current.toDataURL("image/webp", 0.6)
+    saveFavorite({ activePads, compiledCode, thumbnailDataUrl })
+    setIsSaved(true)
+    setTimeout(() => setIsSaved(false), 1500)
+  }, [activePads, compiledCode, saveFavorite])
+
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       canvasRef.current?.requestFullscreen()
@@ -95,7 +108,10 @@ export function HydraCanvas() {
   }, [])
 
   return (
-    <div className="relative group rounded-xl overflow-hidden border border-white/10 bg-black">
+    <div className={cn(
+      "relative group rounded-xl overflow-hidden border border-white/10 bg-black",
+      isSticky && "sticky top-2 z-40"
+    )}>
       {/* Glow border */}
       <div
         className={cn(
@@ -115,22 +131,47 @@ export function HydraCanvas() {
         className="relative z-1 w-full aspect-video bg-black block"
       />
 
-      {/* Fullscreen button */}
-      <button
-        onClick={toggleFullscreen}
-        className={cn(
-          "absolute top-2 right-2 z-20 p-1.5",
-          "bg-black/60 hover:bg-black/80 border border-white/10 rounded-lg",
-          "opacity-0 group-hover:opacity-100 transition-opacity"
-        )}
-        title="Toggle fullscreen"
-      >
-        <Maximize2 className="w-3.5 h-3.5 text-white/50" />
-      </button>
+      {/* Sticky + Fullscreen buttons */}
+      <div className={cn(
+        "absolute top-2 right-2 z-20 flex gap-1",
+        "opacity-0 group-hover:opacity-100 transition-opacity"
+      )}>
+        <button
+          onClick={handleSaveToFavorites}
+          className={cn(
+            "p-1.5 border rounded-lg transition-colors",
+            isSaved
+              ? "bg-pink-900/40 border-pink-400/40 text-pink-400"
+              : "bg-black/60 hover:bg-black/80 border-white/10 text-white/50"
+          )}
+          title="Save to favorites"
+        >
+          <Heart className={cn("w-3.5 h-3.5", isSaved && "fill-current")} />
+        </button>
+        <button
+          onClick={() => setIsSticky((s) => !s)}
+          className={cn(
+            "p-1.5 border rounded-lg transition-colors",
+            isSticky
+              ? "bg-white/15 border-white/30 text-white/80"
+              : "bg-black/60 hover:bg-black/80 border-white/10 text-white/50"
+          )}
+          title="Toggle sticky"
+        >
+          <Pin className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={toggleFullscreen}
+          className="p-1.5 bg-black/60 hover:bg-black/80 border border-white/10 rounded-lg text-white/50"
+          title="Toggle fullscreen"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
 
       {/* Status bar */}
       <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-between px-3 py-1.5 bg-black/60 backdrop-blur-sm">
-        <span className="font-mono text-[9px] text-white/30">Hydra Output (o0)</span>
+        <span className="font-mono text-[9px] text-white/30">Hydra Output(o0)</span>
         <div className="flex items-center gap-1.5">
           {isReady ? (
             <div className="w-1.5 h-1.5 rounded-full bg-green-400/60" />

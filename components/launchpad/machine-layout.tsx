@@ -85,10 +85,11 @@ export function MachineLayout() {
     ? HYDRA_REGISTRY.filter((fn) => fn.category === selectedCategory).slice(0, 16)
     : HYDRA_REGISTRY.slice(0, 16)
 
-  // Los primeros pads activos con parámetros para mostrar en el panel de detalle
-  const activePadsWithParams = activePads.filter(
-    (p) => (HYDRA_REGISTRY.find((fn) => fn.id === p.functionId)?.params.length ?? 0) > 0
-  )
+  // Pads activos con parámetros propios o con fuente secundaria configurable
+  const activePadsWithParams = activePads.filter((p) => {
+    const fn = HYDRA_REGISTRY.find((fn) => fn.id === p.functionId)
+    return (fn?.params.length ?? 0) > 0 || !!fn?.secondarySourceId
+  })
 
   return (
     <div className="flex flex-col gap-4">

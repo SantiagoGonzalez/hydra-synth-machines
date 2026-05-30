@@ -7,6 +7,7 @@ import { ArrowLeft, Radio } from "lucide-react"
 import { MachineLayout } from "@/components/launchpad/machine-layout"
 import { HydraCanvas } from "@/components/launchpad/hydra-canvas"
 import { ChainPreview } from "@/components/launchpad/chain-preview"
+import { FavoritesLibrary } from "@/components/launchpad/favorites-library"
 
 export default function LaunchpadPage() {
   return (
@@ -40,10 +41,11 @@ export default function LaunchpadPage() {
           <MachineLayout />
         </section>
 
-        {/* Right column: canvas + chain preview */}
+        {/* Right column: canvas + chain preview + favorites */}
         <section className="flex flex-col gap-4 min-w-0">
           <HydraCanvas />
           <ChainPreview />
+          <FavoritesLibrary />
         </section>
       </main>
 

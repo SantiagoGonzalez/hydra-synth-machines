@@ -9,6 +9,9 @@ export interface ActivePad {
   functionId: string
   category: HydraCategory
   params: Record<string, number>
+  /** Fuente secundaria seleccionada para funciones de modulación/blend */
+  secondarySourceId?: string
+  secondaryParams?: Record<string, number>
   mode: "toggle" | "momentary"
   activatedAt: number
 }
@@ -23,9 +26,13 @@ interface ChainState {
   deactivatePad: (instanceId: string) => void
   togglePad: (functionId: string) => void
   updateParam: (instanceId: string, paramName: string, value: number) => void
+  updateSecondarySource: (instanceId: string, sourceId: string) => void
+  updateSecondaryParam: (instanceId: string, paramName: string, value: number) => void
   clearAll: () => void
   setOutputBuffer: (buffer: "o0" | "o1" | "o2" | "o3") => void
   markSafeCode: () => void
+  /** Restaura el launchpad completo desde una cadena favorita guardada */
+  restoreFromFavorite: (pads: ActivePad[]) => void
 }
 
 function rebuild(activePads: ActivePad[], outputBuffer: "o0" | "o1" | "o2" | "o3"): string {
@@ -43,11 +50,14 @@ export const useChainStore = create<ChainState>((set, get) => ({
     if (!def) return
 
     const instanceId = `${functionId}-${Date.now()}`
+    const secDef = def.secondarySourceId ? getFunctionDef(def.secondarySourceId) : undefined
     const newPad: ActivePad = {
       instanceId,
       functionId,
       category: def.category,
       params: getDefaultParams(def),
+      secondarySourceId: def.secondarySourceId,
+      secondaryParams: secDef ? getDefaultParams(secDef) : undefined,
       mode,
       activatedAt: Date.now(),
     }
@@ -80,11 +90,14 @@ export const useChainStore = create<ChainState>((set, get) => ({
       const def = getFunctionDef(functionId)
       if (!def) return
 
+      const secDef = def.secondarySourceId ? getFunctionDef(def.secondarySourceId) : undefined
       const newPad: ActivePad = {
         instanceId: `${functionId}-${Date.now()}`,
         functionId,
         category: def.category,
         params: getDefaultParams(def),
+        secondarySourceId: def.secondarySourceId,
+        secondaryParams: secDef ? getDefaultParams(secDef) : undefined,
         mode: "toggle",
         activatedAt: Date.now(),
       }
@@ -98,6 +111,34 @@ export const useChainStore = create<ChainState>((set, get) => ({
     set((state) => {
       const activePads = state.activePads.map((p) =>
         p.instanceId === instanceId ? { ...p, params: { ...p.params, [paramName]: value } } : p
+      )
+      const compiledCode = rebuild(activePads, state.outputBuffer)
+      return { activePads, compiledCode }
+    })
+  },
+
+  // Cambia la fuente secundaria de un pad y reinicia sus parámetros a los valores por defecto
+  updateSecondarySource: (instanceId, sourceId) => {
+    set((state) => {
+      const secDef = getFunctionDef(sourceId)
+      if (!secDef) return state
+      const activePads = state.activePads.map((p) =>
+        p.instanceId === instanceId
+          ? { ...p, secondarySourceId: sourceId, secondaryParams: getDefaultParams(secDef) }
+          : p
+      )
+      const compiledCode = rebuild(activePads, state.outputBuffer)
+      return { activePads, compiledCode }
+    })
+  },
+
+  // Actualiza un parámetro de la fuente secundaria de un pad
+  updateSecondaryParam: (instanceId, paramName, value) => {
+    set((state) => {
+      const activePads = state.activePads.map((p) =>
+        p.instanceId === instanceId
+          ? { ...p, secondaryParams: { ...p.secondaryParams, [paramName]: value } }
+          : p
       )
       const compiledCode = rebuild(activePads, state.outputBuffer)
       return { activePads, compiledCode }
@@ -118,6 +159,20 @@ export const useChainStore = create<ChainState>((set, get) => ({
 
   markSafeCode: () => {
     set((state) => ({ lastSafeCode: state.compiledCode }))
+  },
+
+  // Restaura el estado del launchpad desde una cadena favorita, regenerando instanceIds
+  restoreFromFavorite: (pads) => {
+    const { outputBuffer } = get()
+    const now = Date.now()
+    const restored: ActivePad[] = pads.map((p, i) => ({
+      ...p,
+      instanceId: `${p.functionId}-${now + i}`,
+      activatedAt: now + i,
+      mode: "toggle" as const,
+    }))
+    const compiledCode = rebuild(restored, outputBuffer)
+    set({ activePads: restored, compiledCode })
   },
 }))
 

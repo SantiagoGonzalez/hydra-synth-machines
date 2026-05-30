@@ -160,19 +160,6 @@ Record decisions briefly in the plan or first implementation message, then execu
 
 ---
 
-# OUTPUT CHECKLIST (BEFORE DELIVERY)
-Before finishing a task, verify:
-1. **Minimal Diff:** Did I only change what was necessary without re-pasting the whole file?
-2. **Hardcoding:** Are there any magic strings or numbers left?
-4. **Typing:** Did I avoid using `any`?
-5. **Architecture:** Is the logic in the correct layer (Service vs. Controller)?
-6. **Limits:** Is the component under 250 lines?
-7. Have I updated documentation or `.example` files?
-
-If any checklist item fails, STOP and resolve it before delivering the final answer.
-
----
-
 ## Skill Usage Protocol
 
 - Do NOT load all files from `skills/`
@@ -188,3 +175,33 @@ If no skill exists:
 
 If a skill seems weak:
 → Use `skills/meta/evaluate-skill-quality.skill.md`
+
+---
+
+## TypeScript Regions
+
+- Use `//#region NombreRegion` and `//#endregion NombreRegion` in **components and services** that exceed **100 lines** of logic.
+- Group by **logical responsibility**, not by member type. Name regions in **Spanish**.
+- Examples of valid groupings:
+  - `Constantes` — constants and configuration declared outside or at the top of the class
+  - `Formulario` — form getters and form-related logic
+  - `Validación` — validator setup and reactive validation
+  - `Subscripciones` — observable subscriptions and lifecycle wiring
+  - `Métodos públicos` — public API of the class
+  - `Métodos privados` — internal helpers
+  - `Getters` — accessor properties
+- A region must contain **at least 2 related members**. Do not create a region for a single method.
+- Region names must be short (1–3 words) and descriptive.
+
+---
+
+# OUTPUT CHECKLIST (BEFORE DELIVERY)
+Before finishing a task, verify:
+1. **Minimal Diff:** Did I only change what was necessary without re-pasting the whole file?
+2. **Hardcoding:** Are there any magic strings or numbers left?
+4. **Typing:** Did I avoid using `any`?
+5. **Architecture:** Is the logic in the correct layer (Service vs. Controller)?
+6. **Limits:** Is the component under 250 lines?
+7. Have I updated documentation or `.example` files?
+
+If any checklist item fails, STOP and resolve it before delivering the final answer.

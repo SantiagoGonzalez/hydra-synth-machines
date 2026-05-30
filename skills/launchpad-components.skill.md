@@ -51,8 +51,12 @@ app/launchpad/page.tsx          ← page shell (header, two-column layout, foote
 
 ### Key Types (`stores/chain-store.ts`)
 
-- `ActivePad`: `{ instanceId, functionId, category, params: Record<string, number>, mode, activatedAt }`
-- Actions: `activatePad`, `deactivatePad`, `togglePad`, `updateParam`, `clearAll`, `setOutputBuffer`, `markSafeCode`
+- `ActivePad`: `{ instanceId, functionId, category, params: Record<string, number>, secondarySourceId?, secondaryParams?, mode, activatedAt }`
+  - `secondarySourceId` — runtime-selected source for modulate/blend pads (initialized from `HydraFunctionDef.secondarySourceId`)
+  - `secondaryParams` — current parameter values for the selected secondary source
+- Actions: `activatePad`, `deactivatePad`, `togglePad`, `updateParam`, `updateSecondarySource`, `updateSecondaryParam`, `clearAll`, `setOutputBuffer`, `markSafeCode`
+  - `updateSecondarySource(instanceId, sourceId)` — switches secondary source and resets its params to the new source's defaults
+  - `updateSecondaryParam(instanceId, paramName, value)` — updates a single secondary source param
 - Selectors: `selectIsPadActive`, `selectActivePadInstance`
 
 ### Chain Compilation Rules (`lib/chain-compiler.ts`)
@@ -60,7 +64,7 @@ app/launchpad/page.tsx          ← page shell (header, two-column layout, foote
 1. Pads sorted by `activatedAt` (activation order = chain order)
 2. If first pad is NOT a source → prepend `solid(0,0,0)`
 3. Sources after the first are skipped (linear chain v1)
-4. `modulate`/`blend` pads use a hardcoded `secondarySourceId` for their inner texture
+4. `modulate`/`blend` pads build secondary source call from `pad.secondarySourceId` + `pad.secondaryParams` (falls back to `def.secondarySourceId` defaults if not set)
 5. Chain ends with `.out()` (or `.out(oN)` for non-default buffer)
 6. Params rounded to 4 decimals for clean preview
 
@@ -89,6 +93,9 @@ app/launchpad/page.tsx          ← page shell (header, two-column layout, foote
 - **Color convention**: `CATEGORY_COLORS` from hydra-registry is the single source of pad/token colors
 - **Glow animation**: active pads pulse with framer-motion `boxShadow` keyframes
 - **Global faders**: currently local state in `MachineLayout` — not yet wired to the compiler
+- **Secondary source panel**: `PadParamPanel` shows a source-selector row + secondary sliders for any active pad whose `HydraFunctionDef` has `secondarySourceId`. Source buttons use `CATEGORY_COLORS["source"]`; secondary sliders render at 60% opacity to distinguish from main params.
+- **`activePadsWithParams` filter**: includes pads with zero main params but a `secondarySourceId` (e.g. `layer`) so the param panel always opens for modulate/blend pads
+- **Registry helper**: `getSourceOptions()` returns all `category === "source"` entries — use this for source selector lists, don't filter `HYDRA_REGISTRY` inline
 - **Component size**: keep each component under 250 lines (project rule)
 - **Comments**: complex functions get a one-line Spanish comment at the top (project rule)
 - **File naming**: all new `.tsx`/`.ts` files use kebab-case
@@ -97,7 +104,19 @@ app/launchpad/page.tsx          ← page shell (header, two-column layout, foote
 
 **Add a new Hydra function to the grid:**
 1. Add entry to `HYDRA_REGISTRY` in `lib/hydra-registry.ts` with id, label, category, params
-2. If it's `modulate`/`blend` type, set `secondarySourceId` to a source function id
+2. If it's `modulate`/`blend` type, set `secondarySourceId` to the *default* source id — the user can change it at runtime via the source selector
+
+**Change the secondary source for a modulate pad at runtime:**
+```ts
+updateSecondarySource(instanceId, "osc")  // resets secondaryParams to osc defaults
+updateSecondaryParam(instanceId, "frequency", 30)  // then tweak individual params
+```
+
+**Read which source a modulate pad is currently using:**
+```ts
+const pad = activePads.find(p => p.instanceId === instanceId)
+const sourceId = pad.secondarySourceId ?? getFunctionDef(pad.functionId)?.secondarySourceId
+```
 3. The grid auto-populates from `HYDRA_REGISTRY.slice(0, 16)` — adjust slicing or add pagination
 
 **Add a new control type (e.g., XY pad):**

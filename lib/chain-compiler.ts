@@ -14,11 +14,17 @@ function buildCallFragment(pad: ActivePad, def: HydraFunctionDef): string {
   })
 
   if (def.secondarySourceId) {
-    // Funciones que necesitan una fuente secundaria (modulate, blend, add, layer...)
-    const secDef = getFunctionDef(def.secondarySourceId)
+    // Usa la fuente secundaria configurada en el pad (o la del registro como fallback)
+    const resolvedSourceId = pad.secondarySourceId ?? def.secondarySourceId
+    const secDef = getFunctionDef(resolvedSourceId)
     if (secDef) {
-      const secDefaults = secDef.params.map((p) => p.default)
-      const secCall = `${secDef.id}(${secDefaults.join(", ")})`
+      const secParamValues = secDef.params.map((p) => {
+        const val = pad.secondaryParams?.[p.name] ?? p.default
+        return Math.round(val * 10000) / 10000
+      })
+      const secCall = secParamValues.length > 0
+        ? `${secDef.id}(${secParamValues.join(", ")})`
+        : `${secDef.id}()`
       if (paramValues.length > 0) {
         return `${def.id}(${secCall}, ${paramValues.join(", ")})`
       }
