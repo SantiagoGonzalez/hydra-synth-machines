@@ -1,0 +1,190 @@
+# DEVELOPMENT STANDARDS
+
+## Workflow Orchestration
+
+### 1. Plan Node Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately — don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2. Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 3. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### 4. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes — don't over-engineer
+- Challenge your own work before presenting it
+
+---
+
+## Task Management
+
+<!-- 1. **Plan First**: Write plan to `tasks/todo.md` with checkable items   -->
+1. **Verify Plan**: Check in before starting implementation  
+2. **Track Progress**: Mark items complete as you go  
+3. **Explain Changes**: High-level summary at each step  
+<!-- 5. **Document Results**: Add review section to `tasks/todo.md`   -->
+4. **Capture Lessons**: Update `tasks/lessons.md` after corrections  
+
+---
+
+## FILES
+
+### NAMING FILES
+
+- All newly created files with extensions .ts, .tsx, .css, .sql, .js, and .jsx must use kebab-case for file naming (e.g., user-profile.service.ts, main-layout.component.jsx)
+
+---
+
+## CODE
+
+### CODE MODIFICATION & INTEGRITY
+
+- **Minimal Intervention:** When modifying existing code (e.g., adding try/catch/finally), ONLY wrap the necessary lines. **Do not rewrite or re-paste identical code blocks.**
+- **Diff Preservation:** Keep original indentation, comments, and internal logic exactly as found.
+- **Atomic Changes:** Do not perform "silent refactors" while working on a specific task unless explicitly requested.
+- **No Overwrites:** Never delete 50 lines of functional code to re-insert them identical; use standard refactor tools or precise block replacements.
+
+---
+
+### Code Comments
+
+- When creating a **complex function or module**, add a **one-line comment in Spanish** explaining its purpose.
+
+### Complex definition
+Consider code complex if ANY of the following apply:
+- More than **25 lines of logic**
+- More than **2 levels of nesting** (`if`, `for`, `switch`)
+- Multiple conditional branches
+- Non-trivial business rules
+
+---
+
+## CONSTRAINTS
+
+- **Simplicity First**: Make every change as simple as possible. Prefer minimal, focused changes over large refactors
+- **No Laziness**: Find root causes. No temporary fixes.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+- **Follow Standard** Do NOT introduce new patterns if a standard already exists in the app
+- **Consistency** Maintain consistency with existing architecture
+- **Tell, Don't Ask:** Instead of asking an object for its data to perform logic outside of it, move the logic inside the object that owns the data.
+
+---
+
+## Hydra Skills Index
+
+When the task involves **Hydra live-coding**, patches, visual synthesis, API reference, challenges, or the playground, treat this repo's skills index as the **source of truth** (before inventing APIs or guessing parameters).
+
+### Entry points
+
+| Resource | Path |
+|----------|------|
+| Master index | `docs/hydra-skills-index/index.md` |
+| Composition mental model | `docs/hydra-skills-index/composition-guide.md` |
+| Per-function skills | `docs/hydra-skills-index/{sources,geometry,color,blend,modulate}/` |
+
+Official references (for gaps only): [Hydra Functions](https://hydra.ojack.xyz/functions/), [Hydra Book](https://hydra-book.glitches.me/).
+
+### Agent rules
+
+1. **Read relevant skill files** before suggesting or editing Hydra code (e.g. `modulate` → `docs/hydra-skills-index/modulate/modulate.md`).
+2. **Do not invent APIs** — if a symbol is undocumented or marked `TODO` in the index, note the gap; do not guess signatures or behavior.
+3. **Reuse official naming** — function names and filenames match the reference (`osc`, `modulateScale`, kebab-case paths).
+4. **Composition order** — default pipeline: Source → Geometry → Color → Blend/Out; modulate placement and fusion choice matter (see composition guide).
+5. **Output ranges** — remember `noise` is [-1, 1] vs `osc`/`gradient`/`voronoi` [0, 1]; buffer `.out()` clips to [0, 1].
+6. **Scope** — this index is documentation for patches and learning; do not build synth UI/layout unless explicitly requested.
+7. **Language** — skill file summaries use Spanish one-liners where present; agent plans and commit messages follow existing COMMITS rules (Spanish).
+
+### Quick map
+
+- **Sources:** `osc`, `noise`, `voronoi`, `shape`, `gradient`, `src`, `solid`, `prev`
+- **Geometry:** `rotate`, `scale`, `pixelate`, `repeat`, `kaleid`, `scroll`
+- **Color:** `hue`, `saturate`, `colorama`, `brightness`, `contrast`, `invert`, `luma`, `thresh`, `posterize`, `color`, `shift`, channels
+- **Blend:** `add`, `sub`, `diff`, `mult`, `mask`, `layer`, `blend`
+- **Modulate:** `modulate`, `modulateScale`, `modulatePixelate`, `modulateRotate`, `modulateHue`, `modulateRepeat`, `modulateKaleid`, `modulateScroll`
+- **Globals / media:** `docs/hydra-skills-index/synth-settings/`, `external-sources/`, `arrays/`, `audio/`
+
+---
+
+## Clarify Before Acting
+
+Resolve ambiguity **before** implementation. Do not stall on trivia; do not guess on decisions that change behavior, data, or architecture.
+
+### Explore first, ask second
+
+1. **Gather context with tools** — read relevant files, search the repo, check docs (`docs/`, `docs/hydra-skills-index/`, `tasks/`), and use conversation history.
+2. **Ask only what tools cannot answer** — missing business rules, user preference among valid options, destructive scope, or unclear acceptance criteria.
+3. **Never ask filler** — do not invent questions to hit a quota. One precise question beats three vague ones.
+
+### When to ask (required)
+
+Ask (or confirm) when any of these would otherwise be **inferred**:
+
+- Source of truth (DB, API, config, env, mock)
+- Mapping or naming the codebase does not establish
+- Trade-off between approaches with different UX, performance, or maintenance cost
+- Business rules, permissions, or edge cases not documented in repo
+- Destructive, irreversible, or wide-scope changes (delete data, migrations, mass rename)
+
+Skip asking when the user was explicit, the repo/documents answer it, or the choice is reversible and low impact.
+
+### How to ask (agentic)
+
+- **Batch** up to **3** high-leverage questions in **one** message when clarification is needed; prefer a single structured form (e.g. `AskQuestion`) over a long back-and-forth.
+- Each question must change the plan or prevent a wrong implementation; confirmation questions are allowed only when they disambiguate a real fork.
+- Propose a **default assumption** per question when reasonable (e.g. "Unless you prefer X, I will Y") so the user can reply with "defaults OK" or one-line answers.
+- If the user says proceed / use defaults / your call, continue with stated assumptions; do not re-ask the same points.
+
+### After answers
+
+Record decisions briefly in the plan or first implementation message, then execute without re-opening settled questions unless new evidence appears.
+
+---
+
+## COMMITS
+- **Generate commit message (AI):** Conventional Commits `type(scope): description`. **Scope (required):** single lowercase word for the main functional area (usually the first app route segment: `colecciones`, `facturas`, `productos`, `clientes`, `precios`, `stock`; cross-cutting: `web`, `api`, `supabase`, `repo`).
+- **Language:** Write the title and optional body in Spanish.
+- **Types:** `fix`, `feat`, `build`, `docs`, `style`, `chore`.
+- **Example:** `feat(colecciones): permite editar precios desde el detalle`.
+
+---
+
+# OUTPUT CHECKLIST (BEFORE DELIVERY)
+Before finishing a task, verify:
+1. **Minimal Diff:** Did I only change what was necessary without re-pasting the whole file?
+2. **Hardcoding:** Are there any magic strings or numbers left?
+4. **Typing:** Did I avoid using `any`?
+5. **Architecture:** Is the logic in the correct layer (Service vs. Controller)?
+6. **Limits:** Is the component under 250 lines?
+7. Have I updated documentation or `.example` files?
+
+If any checklist item fails, STOP and resolve it before delivering the final answer.
+
+---
+
+## Skill Usage Protocol
+
+- Do NOT load all files from `skills/`
+- Always consult `skills/skills-index.md` first
+- Identify relevant skills based on user intent
+- Only load specific skill files when needed
+
+If a relevant skill exists:
+→ Use it
+
+If no skill exists:
+→ Suggest creating one using `skills/meta/create-skills.skill.md`
+
+If a skill seems weak:
+→ Use `skills/meta/evaluate-skill-quality.skill.md`
