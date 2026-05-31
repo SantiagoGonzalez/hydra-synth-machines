@@ -24,12 +24,16 @@ Guía para iterar sobre los componentes del launchpad VJ — el grid de pads int
 ```
 app/launchpad/page.tsx          ← page shell (header, two-column layout, footer)
 ├── components/launchpad/
-│   ├── machine-layout.tsx      ← grid orchestrator: category filter, 4×4 pads, global faders, param panel
-│   ├── pad.tsx                 ← atomic pad: pointer events, toggle/momentary modes, color glow
-│   ├── param-slider.tsx        ← vertical Radix slider per param + PadParamPanel wrapper
+│   ├── machine-layout.tsx      ← orchestrator: SectionRows per category, global faders, param panel
+│   ├── section-row.tsx         ← row per category: header + FunctionGroups (3 pads each) + AddPad
+│   ├── add-pad.tsx             ← "+" pad with Popover + Command palette to add extra slot instances
+│   ├── pad.tsx                 ← atomic pad: pointer events, toggle/momentary, glow, isExtra X button
+│   ├── param-slider.tsx        ← vertical Radix slider per param + PadParamPanel (shows instance #N)
 │   ├── chain-preview.tsx       ← compiled code display with color-coded tokens
 │   └── hydra-canvas.tsx        ← WebGL canvas, initializes hydra-synth, evaluates code
 ```
+
+> For detailed documentation of `section-row.tsx` and `add-pad.tsx`, see `skills/section-rows-and-add-pad.skill.md`
 
 ### Data Flow
 
@@ -52,11 +56,19 @@ app/launchpad/page.tsx          ← page shell (header, two-column layout, foote
 ### Key Types (`stores/chain-store.ts`)
 
 - `ActivePad`: `{ instanceId, functionId, category, params: Record<string, number>, secondarySourceId?, secondaryParams?, mode, activatedAt }`
-  - `secondarySourceId` — runtime-selected source for modulate/blend pads (initialized from `HydraFunctionDef.secondarySourceId`)
+  - `secondarySourceId` — runtime-selected source for modulate/blend pads
   - `secondaryParams` — current parameter values for the selected secondary source
-- Actions: `activatePad`, `deactivatePad`, `togglePad`, `updateParam`, `updateSecondarySource`, `updateSecondaryParam`, `clearAll`, `setOutputBuffer`, `markSafeCode`
-  - `updateSecondarySource(instanceId, sourceId)` — switches secondary source and resets its params to the new source's defaults
-  - `updateSecondaryParam(instanceId, paramName, value)` — updates a single secondary source param
+- `PadSlot extends ActivePad`: `{ ...ActivePad, isActive: boolean, isExtra: boolean }`
+  - `isActive` — true if the slot is on and contributing to the chain
+  - `isExtra` — true if created via the "+" pad; these can be removed via the X button
+  - **`padSlots[]`** is the source of truth; `activePads[]` is derived: `padSlots.filter(s => s.isActive)`
+- Actions:
+  - `toggleSlot(slotId)` — toggle `isActive` on a specific slot (primary toggle action)
+  - `addSlot(functionId)` — create a new extra slot for a function (via "+" pad)
+  - `removeSlot(slotId)` — delete an extra slot (validates: must not be the last of that functionId)
+  - `updateParam`, `updateSecondarySource`, `updateSecondaryParam` — param editing by `instanceId` (= `slotId`)
+  - `clearAll` — sets all slots to `isActive: false` (slots remain visible)
+  - `activatePad`, `deactivatePad` — legacy/momentary API (still used for momentary mode)
 - Selectors: `selectIsPadActive`, `selectActivePadInstance`
 
 ### Chain Compilation Rules (`lib/chain-compiler.ts`)
@@ -87,15 +99,17 @@ app/launchpad/page.tsx          ← page shell (header, two-column layout, foote
 
 ## Heuristics
 
-- **Pad grid**: 4×4 (16 cells). Filtering by category may show fewer — fill remaining with empty cells
+- **Layout**: sections per category (Source → Geometry → Color → Modulate → Blend). No category filter bar — all sections always visible
+- **Pad slots**: 3 base slots per function by default; extra slots added via "+" pad (`isExtra: true`)
 - **Pointer capture**: Pad uses `setPointerCapture` for reliable momentary mode on touch/mouse
 - **Animation budget**: param sliders use `requestAnimationFrame` debounce to maintain 60fps
 - **Color convention**: `CATEGORY_COLORS` from hydra-registry is the single source of pad/token colors
 - **Glow animation**: active pads pulse with framer-motion `boxShadow` keyframes
 - **Global faders**: currently local state in `MachineLayout` — not yet wired to the compiler
-- **Secondary source panel**: `PadParamPanel` shows a source-selector row + secondary sliders for any active pad whose `HydraFunctionDef` has `secondarySourceId`. Source buttons use `CATEGORY_COLORS["source"]`; secondary sliders render at 60% opacity to distinguish from main params.
+- **Secondary source panel**: `PadParamPanel` shows a source-selector row + secondary sliders for pads with `secondarySourceId`. Source buttons use `CATEGORY_COLORS["source"]`
+- **Instance label in param panel**: if multiple slots of the same function are active, param panel shows `"rotate #2"` etc.
 - **`activePadsWithParams` filter**: includes pads with zero main params but a `secondarySourceId` (e.g. `layer`) so the param panel always opens for modulate/blend pads
-- **Registry helper**: `getSourceOptions()` returns all `category === "source"` entries — use this for source selector lists, don't filter `HYDRA_REGISTRY` inline
+- **Registry helpers**: `getSourceOptions()` for source selector lists; `getRegistryByCategory(cat)` for section rendering
 - **Component size**: keep each component under 250 lines (project rule)
 - **Comments**: complex functions get a one-line Spanish comment at the top (project rule)
 - **File naming**: all new `.tsx`/`.ts` files use kebab-case
@@ -105,6 +119,7 @@ app/launchpad/page.tsx          ← page shell (header, two-column layout, foote
 **Add a new Hydra function to the grid:**
 1. Add entry to `HYDRA_REGISTRY` in `lib/hydra-registry.ts` with id, label, category, params
 2. If it's `modulate`/`blend` type, set `secondarySourceId` to the *default* source id — the user can change it at runtime via the source selector
+3. `initPadSlots()` auto-generates 3 slots; `getRegistryByCategory()` picks it up in `SectionRow`; `AddPad` lists it automatically
 
 **Change the secondary source for a modulate pad at runtime:**
 ```ts
@@ -117,7 +132,7 @@ updateSecondaryParam(instanceId, "frequency", 30)  // then tweak individual para
 const pad = activePads.find(p => p.instanceId === instanceId)
 const sourceId = pad.secondarySourceId ?? getFunctionDef(pad.functionId)?.secondarySourceId
 ```
-3. The grid auto-populates from `HYDRA_REGISTRY.slice(0, 16)` — adjust slicing or add pagination
+3. No slicing needed — all functions appear in their respective section rows
 
 **Add a new control type (e.g., XY pad):**
 1. Create `components/launchpad/xy-pad.tsx` (atomic, self-contained)
@@ -135,7 +150,7 @@ const sourceId = pad.secondarySourceId ?? getFunctionDef(pad.functionId)?.second
 |-------|----------|
 | Canvas black after pad toggle | Check `compileChain` output — likely missing source; verify `SAFE_SOURCE` fallback |
 | Slider jank on fast drag | Ensure RAF debounce in `SingleParamSlider`; don't subscribe to full store |
-| Multiple pads of same function | Current `togglePad` deduplicates by `functionId` — only one instance per function |
+| Multiple pads of same function | Each slot is independent — multiple instances of the same function are supported. Use `addSlot(functionId)` via "+" pad. |
 | Error in evaluated code | `hydra-canvas.tsx` catches via `onError` callback → reverts to `lastSafeCode` |
 | Performance regression | Profile — likely too many store subscriptions. Use granular selectors |
 | Pad not responding to touch | Verify `setPointerCapture` is called on pointerdown; check pointer event types |

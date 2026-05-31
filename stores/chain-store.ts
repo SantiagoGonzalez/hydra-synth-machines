@@ -28,7 +28,7 @@ export interface PadSlot extends ActivePad {
 function initPadSlots(): PadSlot[] {
   return HYDRA_REGISTRY.flatMap((fn) => {
     const secDef = fn.secondarySourceId ? getFunctionDef(fn.secondarySourceId) : undefined
-    return Array.from({ length: 3 }, (_, i) => ({
+    return Array.from({ length: 1 }, (_, i) => ({
       instanceId: `${fn.id}-${i + 1}`,
       functionId: fn.id,
       category: fn.category,
