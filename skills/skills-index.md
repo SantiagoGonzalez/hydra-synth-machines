@@ -109,6 +109,7 @@
 |-------|------|-------|---------|------|
 | Launchpad Components | `skills/launchpad-components.skill.md` | atomic | Guide for iterating on launchpad pad grid, canvas, chain system, and controls | launchpad, components, pads, iteration |
 | Machines | `skills/machines.skill.md` | composite | Defines what a machine is: a configured layout of controls mapped to Hydra functions forming a visual instrument | machine, architecture, layout, instrument |
+| Favorites Library | `skills/favorites-library.skill.md` | atomic | Save, display, and restore Hydra chains as bookmarks with cached thumbnail previews | launchpad, favorites, persistence, thumbnail |
 
 ---
 
@@ -136,6 +137,7 @@
 | Rebuild this index from scratch | `skills/meta/scan-skills.skill.md` |
 | Work on launchpad components or add features | `skills/launchpad-components.skill.md` |
 | Understand or design a new machine layout | `skills/machines.skill.md` |
+| Save, load, or display favorite chains in the library | `skills/favorites-library.skill.md` |
 
 ---
 

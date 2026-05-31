@@ -150,31 +150,6 @@ Skip asking when the user was explicit, the repo/documents answer it, or the cho
 
 Record decisions briefly in the plan or first implementation message, then execute without re-opening settled questions unless new evidence appears.
 
----
-
-## COMMITS
-- **Generate commit message (AI):** Conventional Commits `type(scope): description`. **Scope (required):** single lowercase word for the main functional area (usually the first app route segment: `colecciones`, `facturas`, `productos`, `clientes`, `precios`, `stock`; cross-cutting: `web`, `api`, `supabase`, `repo`).
-- **Language:** Write the title and optional body in Spanish.
-- **Types:** `fix`, `feat`, `build`, `docs`, `style`, `chore`.
-- **Example:** `feat(colecciones): permite editar precios desde el detalle`.
-
----
-
-## Skill Usage Protocol
-
-- Do NOT load all files from `skills/`
-- Always consult `skills/skills-index.md` first
-- Identify relevant skills based on user intent
-- Only load specific skill files when needed
-
-If a relevant skill exists:
-→ Use it
-
-If no skill exists:
-→ Suggest creating one using `skills/meta/create-skills.skill.md`
-
-If a skill seems weak:
-→ Use `skills/meta/evaluate-skill-quality.skill.md`
 
 ---
 
@@ -192,6 +167,35 @@ If a skill seems weak:
   - `Getters` — accessor properties
 - A region must contain **at least 2 related members**. Do not create a region for a single method.
 - Region names must be short (1–3 words) and descriptive.
+
+---
+
+
+## Skill Usage Protocol
+
+- Do NOT load all files from `skills/`
+- Always consult `skills/skills-index.md` first
+- Identify relevant skills based on user intent
+- Only load specific skill files when needed
+
+If a relevant skill exists:
+→ Use it
+
+If no skill exists:
+→ Suggest creating one using `skills/meta/create-skills.skill.md`
+
+If a skill seems weak:
+→ Use `skills/meta/evaluate-skill-quality.skill.md`
+
+
+---
+
+
+## COMMITS
+- **Generate commit message (AI):** Conventional Commits `type(scope): description`. **Scope (required):** single lowercase word for the main functional area (usually the first app route segment: `colecciones`, `facturas`, `productos`, `clientes`, `precios`, `stock`; cross-cutting: `web`, `api`, `supabase`, `repo`).
+- **Language:** Write the title and optional body in Spanish.
+- **Types:** `fix`, `feat`, `build`, `docs`, `style`, `chore`.
+- **Example:** `feat(colecciones): permite editar precios desde el detalle`.
 
 ---
 
