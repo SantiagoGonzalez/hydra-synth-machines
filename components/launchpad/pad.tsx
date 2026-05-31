@@ -1,8 +1,9 @@
-"use client"
+﻿"use client"
 
-// Componente atómico del launchpad: botón de pad con estados de activación y colores por categoría
+// Componente atÃ³mico del launchpad: botÃ³n de pad con estados de activaciÃ³n y colores por categorÃ­a
 
 import { useCallback } from "react"
+import { X } from "lucide-react"
 import { motion } from "framer-motion"
 import { CATEGORY_COLORS, type HydraFunctionDef } from "@/lib/hydra-registry"
 import { cn } from "@/lib/utils"
@@ -11,20 +12,28 @@ interface PadProps {
   functionDef: HydraFunctionDef
   isActive: boolean
   mode: "toggle" | "momentary"
+  /** Etiqueta de instancia, ej. "#2" para diferenciar slots del mismo tipo */
+  slotLabel?: string
+  /** Si true, muestra botÃ³n X para eliminar el slot */
+  isExtra?: boolean
   onToggle: () => void
   onMomentaryStart: () => void
   onMomentaryEnd: () => void
   onModeChange: (mode: "toggle" | "momentary") => void
+  onRemove?: () => void
 }
 
 export function Pad({
   functionDef,
   isActive,
   mode,
+  slotLabel,
+  isExtra,
   onToggle,
   onMomentaryStart,
   onMomentaryEnd,
   onModeChange,
+  onRemove,
 }: PadProps) {
   const color = CATEGORY_COLORS[functionDef.category]
 
@@ -60,6 +69,14 @@ export function Pad({
     [mode, onModeChange]
   )
 
+  const handleRemove = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onRemove?.()
+    },
+    [onRemove]
+  )
+
   return (
     <motion.div
       className={cn(
@@ -92,7 +109,7 @@ export function Pad({
       }
       whileTap={{ scale: 0.94 }}
     >
-      {/* Indicator dot */}
+      {/* Indicador activo */}
       <div
         className={cn(
           "absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full transition-all duration-150",
@@ -100,6 +117,17 @@ export function Pad({
         )}
         style={{ backgroundColor: color }}
       />
+
+      {/* BotÃ³n X para eliminar slots extra */}
+      {isExtra && (
+        <button
+          onClick={handleRemove}
+          className="absolute top-0.5 left-0.5 w-4 h-4 rounded flex items-center justify-center text-white/20 hover:text-red-400/70 hover:bg-red-500/10 transition-colors"
+          title="Eliminar slot"
+        >
+          <X className="w-2.5 h-2.5" />
+        </button>
+      )}
 
       {/* Label */}
       <span
@@ -112,9 +140,9 @@ export function Pad({
         {functionDef.label}
       </span>
 
-      {/* Category badge */}
+      {/* NÃºmero de instancia */}
       <span className="font-mono text-[8px] text-white/25 uppercase tracking-wider">
-        {functionDef.category.slice(0, 3)}
+        {slotLabel ?? functionDef.category.slice(0, 3)}
       </span>
 
       {/* Mode indicator (M = momentary, T = toggle) */}
@@ -132,3 +160,4 @@ export function Pad({
     </motion.div>
   )
 }
+

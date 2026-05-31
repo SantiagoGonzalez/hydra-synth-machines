@@ -39,6 +39,8 @@ function buildCallFragment(pad: ActivePad, def: HydraFunctionDef): string {
 /**
  * Compila la lista de pads activos en una expresión Hydra válida.
  * Garantiza que la cadena comienza con una fuente y termina con .out().
+ * Nota: acepta ActivePad[] o PadSlot[] (compatible por herencia).
+ * Solo la primera source inicia la cadena; sources adicionales se ignoran.
  */
 export function compileChain(
   activePads: ActivePad[],

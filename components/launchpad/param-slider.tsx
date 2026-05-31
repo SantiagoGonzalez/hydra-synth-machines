@@ -84,9 +84,16 @@ export function PadParamPanel({ pad }: PadParamPanelProps) {
   const updateParam = useChainStore((s) => s.updateParam)
   const updateSecondarySource = useChainStore((s) => s.updateSecondarySource)
   const updateSecondaryParam = useChainStore((s) => s.updateSecondaryParam)
+  const padSlots = useChainStore((s) => s.padSlots)
   const def = getFunctionDef(pad.functionId)
 
   if (!def) return null
+
+  // Número de instancia visible si hay más de un slot activo para este functionId
+  const activeOfSameType = padSlots.filter((s) => s.functionId === pad.functionId && s.isActive)
+  const instanceIndex = activeOfSameType.findIndex((s) => s.instanceId === pad.instanceId)
+  const instanceLabel =
+    activeOfSameType.length > 1 && instanceIndex >= 0 ? ` #${instanceIndex + 1}` : ""
 
   const hasMainParams = def.params.length > 0
   const hasSecondary = !!def.secondarySourceId
@@ -109,7 +116,7 @@ export function PadParamPanel({ pad }: PadParamPanelProps) {
   return (
     <div className="flex flex-col gap-2">
       <span className="font-mono text-[10px] font-semibold" style={{ color: mainColor }}>
-        {def.label}
+        {def.label}{instanceLabel}
       </span>
 
       {/* Parámetros principales del pad */}

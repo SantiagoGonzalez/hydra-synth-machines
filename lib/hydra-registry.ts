@@ -72,6 +72,18 @@ export const HYDRA_REGISTRY: HydraFunctionDef[] = [
     description: "Color gradient field",
     params: [{ name: "speed", default: 0, min: 0, max: 5, step: 0.05 }],
   },
+  {
+    id: "solid",
+    label: "solid",
+    category: "source",
+    description: "Solid color fill",
+    params: [
+      { name: "r", default: 0, min: 0, max: 1, step: 0.01 },
+      { name: "g", default: 0, min: 0, max: 1, step: 0.01 },
+      { name: "b", default: 0, min: 0, max: 1, step: 0.01 },
+      { name: "a", default: 1, min: 0, max: 1, step: 0.01 },
+    ],
+  },
 
   // ── Geometry ─────────────────────────────────────────────────────────────
   {
@@ -112,6 +124,30 @@ export const HYDRA_REGISTRY: HydraFunctionDef[] = [
       { name: "pixelY", default: 20, min: 2, max: 200, step: 1 },
     ],
   },
+  {
+    id: "repeat",
+    label: "repeat",
+    category: "geometry",
+    description: "Tile UV in both axes",
+    params: [
+      { name: "repeatX", default: 3, min: 1, max: 10, step: 0.5 },
+      { name: "repeatY", default: 3, min: 1, max: 10, step: 0.5 },
+      { name: "offsetX", default: 0, min: -0.5, max: 0.5, step: 0.01 },
+      { name: "offsetY", default: 0, min: -0.5, max: 0.5, step: 0.01 },
+    ],
+  },
+  {
+    id: "scroll",
+    label: "scroll",
+    category: "geometry",
+    description: "Pan UV coords",
+    params: [
+      { name: "scrollX", default: 0.1, min: 0, max: 1, step: 0.01 },
+      { name: "scrollY", default: 0.1, min: 0, max: 1, step: 0.01 },
+      { name: "speedX", default: 0, min: -2, max: 2, step: 0.01 },
+      { name: "speedY", default: 0, min: -2, max: 2, step: 0.01 },
+    ],
+  },
 
   // ── Color ─────────────────────────────────────────────────────────────────
   {
@@ -148,6 +184,66 @@ export const HYDRA_REGISTRY: HydraFunctionDef[] = [
     category: "color",
     description: "Luminance offset",
     params: [{ name: "amount", default: 0.4, min: -1, max: 1, step: 0.01 }],
+  },
+  {
+    id: "hue",
+    label: "hue",
+    category: "color",
+    description: "Rotate hue in HSV space",
+    params: [{ name: "hueRotate", default: 0.4, min: 0, max: 1, step: 0.005 }],
+  },
+  {
+    id: "saturate",
+    label: "saturate",
+    category: "color",
+    description: "Boost/reduce color saturation",
+    params: [{ name: "amount", default: 1.5, min: 0, max: 4, step: 0.05 }],
+  },
+  {
+    id: "contrast",
+    label: "contrast",
+    category: "color",
+    description: "Contrast curve adjustment",
+    params: [{ name: "amount", default: 1.6, min: 0, max: 4, step: 0.05 }],
+  },
+  {
+    id: "invert",
+    label: "invert",
+    category: "color",
+    description: "Invert RGB values",
+    params: [{ name: "amount", default: 1, min: 0, max: 1, step: 0.01 }],
+  },
+  {
+    id: "luma",
+    label: "luma",
+    category: "color",
+    description: "Luminance alpha key",
+    params: [
+      { name: "threshold", default: 0.5, min: 0, max: 1, step: 0.01 },
+      { name: "tolerance", default: 0.1, min: 0, max: 1, step: 0.01 },
+    ],
+  },
+  {
+    id: "thresh",
+    label: "thresh",
+    category: "color",
+    description: "Threshold binarize",
+    params: [
+      { name: "threshold", default: 0.5, min: 0, max: 1, step: 0.01 },
+      { name: "tolerance", default: 0.04, min: 0, max: 1, step: 0.01 },
+    ],
+  },
+  {
+    id: "shift",
+    label: "shift",
+    category: "color",
+    description: "RGBA channel offset shift",
+    params: [
+      { name: "r", default: 0.5, min: -1, max: 1, step: 0.01 },
+      { name: "g", default: 0, min: -1, max: 1, step: 0.01 },
+      { name: "b", default: 0, min: -1, max: 1, step: 0.01 },
+      { name: "a", default: 1, min: 0, max: 2, step: 0.01 },
+    ],
   },
 
   // ── Modulate ──────────────────────────────────────────────────────────────
@@ -189,6 +285,51 @@ export const HYDRA_REGISTRY: HydraFunctionDef[] = [
     secondarySourceId: "noise",
     params: [{ name: "amount", default: 1, min: 0, max: 5, step: 0.05 }],
   },
+  {
+    id: "modulatePixelate",
+    label: "mod·pixelate",
+    category: "modulate",
+    description: "Modulator-driven pixelation",
+    secondarySourceId: "noise",
+    params: [
+      { name: "multiple", default: 10, min: 1, max: 50, step: 0.5 },
+      { name: "offset", default: 3, min: -5, max: 5, step: 0.1 },
+    ],
+  },
+  {
+    id: "modulateRepeat",
+    label: "mod·repeat",
+    category: "modulate",
+    description: "Modulator-driven tiling",
+    secondarySourceId: "osc",
+    params: [
+      { name: "repeatX", default: 1.5, min: 0.5, max: 10, step: 0.1 },
+      { name: "repeatY", default: 1.5, min: 0.5, max: 10, step: 0.1 },
+      { name: "offsetX", default: 0.5, min: 0, max: 1, step: 0.01 },
+      { name: "offsetY", default: 0.5, min: 0, max: 1, step: 0.01 },
+    ],
+  },
+  {
+    id: "modulateKaleid",
+    label: "mod·kaleid",
+    category: "modulate",
+    description: "Modulator-driven kaleidoscope",
+    secondarySourceId: "osc",
+    params: [{ name: "nSides", default: 4, min: 0, max: 20, step: 0.1 }],
+  },
+  {
+    id: "modulateScroll",
+    label: "mod·scroll",
+    category: "modulate",
+    description: "Modulator-driven scroll warp",
+    secondarySourceId: "noise",
+    params: [
+      { name: "scrollX", default: 0.5, min: 0, max: 1, step: 0.01 },
+      { name: "scrollY", default: 0.5, min: 0, max: 1, step: 0.01 },
+      { name: "speedX", default: 0, min: -2, max: 2, step: 0.01 },
+      { name: "speedY", default: 0, min: -2, max: 2, step: 0.01 },
+    ],
+  },
 
   // ── Blend ─────────────────────────────────────────────────────────────────
   {
@@ -215,6 +356,38 @@ export const HYDRA_REGISTRY: HydraFunctionDef[] = [
     secondarySourceId: "shape",
     params: [],
   },
+  {
+    id: "sub",
+    label: "sub",
+    category: "blend",
+    description: "Subtract textures",
+    secondarySourceId: "osc",
+    params: [{ name: "amount", default: 0.5, min: 0, max: 1, step: 0.01 }],
+  },
+  {
+    id: "diff",
+    label: "diff",
+    category: "blend",
+    description: "Absolute difference",
+    secondarySourceId: "noise",
+    params: [],
+  },
+  {
+    id: "mult",
+    label: "mult",
+    category: "blend",
+    description: "Multiply textures",
+    secondarySourceId: "osc",
+    params: [{ name: "amount", default: 1, min: 0, max: 1, step: 0.01 }],
+  },
+  {
+    id: "mask",
+    label: "mask",
+    category: "blend",
+    description: "Alpha mask",
+    secondarySourceId: "shape",
+    params: [],
+  },
 ]
 
 /** Lookup de una función por id */
@@ -225,6 +398,11 @@ export function getFunctionDef(id: string): HydraFunctionDef | undefined {
 /** Retorna todas las funciones fuente disponibles como opciones para fuente secundaria */
 export function getSourceOptions(): HydraFunctionDef[] {
   return HYDRA_REGISTRY.filter((fn) => fn.category === "source")
+}
+
+/** Retorna todas las funciones de una categoría dada */
+export function getRegistryByCategory(cat: HydraCategory): HydraFunctionDef[] {
+  return HYDRA_REGISTRY.filter((fn) => fn.category === cat)
 }
 
 /** Obtiene los valores por defecto de los parámetros de una función */

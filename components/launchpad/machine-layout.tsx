@@ -1,20 +1,17 @@
-"use client"
+﻿"use client"
 
-// Contenedor principal del launchpad: grilla 4x4 de pads con faders globales y panel de parámetros
+// Contenedor principal del launchpad: secciones por categorÃ­a con grupos de pads por funciÃ³n
 
 import { useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Trash2, Shuffle } from "lucide-react"
-import { HYDRA_REGISTRY, CATEGORY_COLORS, CATEGORY_LABELS, type HydraCategory } from "@/lib/hydra-registry"
+import { HYDRA_REGISTRY, type HydraCategory } from "@/lib/hydra-registry"
 import { useChainStore } from "@/stores/chain-store"
-import { Pad } from "@/components/launchpad/pad"
+import { SectionRow } from "@/components/launchpad/section-row"
 import { PadParamPanel } from "@/components/launchpad/param-slider"
 import { cn } from "@/lib/utils"
 
-// Orden fijo de pads en el grid (4x4 = 16 celdas, 20 funciones en el registro → primeras 16)
-const GRID_FUNCTIONS = HYDRA_REGISTRY.slice(0, 16).map((fn) => fn.id)
-
-// Faders globales mapeados a parámetros del store
+// Faders globales mapeados a parÃ¡metros del store
 const GLOBAL_FADERS = [
   { id: "speed", label: "SPEED", min: 0, max: 3, step: 0.05, default: 1 },
   { id: "brightness", label: "BRIGHT", min: -1, max: 1, step: 0.01, default: 0 },
@@ -27,8 +24,11 @@ type GlobalFaderId = (typeof GLOBAL_FADERS)[number]["id"]
 const CATEGORY_ORDER: HydraCategory[] = ["source", "geometry", "color", "modulate", "blend"]
 
 export function MachineLayout() {
+  const padSlots = useChainStore((s) => s.padSlots)
   const activePads = useChainStore((s) => s.activePads)
-  const togglePad = useChainStore((s) => s.togglePad)
+  const toggleSlot = useChainStore((s) => s.toggleSlot)
+  const addSlot = useChainStore((s) => s.addSlot)
+  const removeSlot = useChainStore((s) => s.removeSlot)
   const activatePad = useChainStore((s) => s.activatePad)
   const deactivatePad = useChainStore((s) => s.deactivatePad)
   const clearAll = useChainStore((s) => s.clearAll)
@@ -37,27 +37,27 @@ export function MachineLayout() {
   const [globalFaders, setGlobalFaders] = useState<Record<GlobalFaderId, number>>(
     Object.fromEntries(GLOBAL_FADERS.map((f) => [f.id, f.default])) as Record<GlobalFaderId, number>
   )
-  const [selectedCategory, setSelectedCategory] = useState<HydraCategory | null>(null)
 
   const getModeFor = useCallback(
-    (functionId: string): "toggle" | "momentary" => padModes[functionId] ?? "toggle",
+    (slotId: string): "toggle" | "momentary" => padModes[slotId] ?? "toggle",
     [padModes]
   )
 
-  const handleModeChange = useCallback((functionId: string, mode: "toggle" | "momentary") => {
-    setPadModes((prev) => ({ ...prev, [functionId]: mode }))
+  const handleModeChange = useCallback((slotId: string, mode: "toggle" | "momentary") => {
+    setPadModes((prev) => ({ ...prev, [slotId]: mode }))
   }, [])
 
   const handleMomentaryStart = useCallback(
-    (functionId: string) => {
-      activatePad(functionId, "momentary")
+    (slotId: string) => {
+      const slot = padSlots.find((s) => s.instanceId === slotId)
+      if (slot) activatePad(slot.functionId, "momentary")
     },
-    [activatePad]
+    [padSlots, activatePad]
   )
 
   const handleMomentaryEnd = useCallback(
-    (functionId: string) => {
-      const pad = activePads.find((p) => p.functionId === functionId && p.mode === "momentary")
+    (slotId: string) => {
+      const pad = activePads.find((p) => p.instanceId === slotId && p.mode === "momentary")
       if (pad) deactivatePad(pad.instanceId)
     },
     [activePads, deactivatePad]
@@ -67,25 +67,21 @@ export function MachineLayout() {
     clearAll()
     const sources = HYDRA_REGISTRY.filter((f) => f.category === "source")
     const transforms = HYDRA_REGISTRY.filter((f) => f.category !== "source")
-
     const randSrc = sources[Math.floor(Math.random() * sources.length)]
     const randT1 = transforms[Math.floor(Math.random() * transforms.length)]
     const randT2 = transforms.filter((f) => f.id !== randT1.id)[
       Math.floor(Math.random() * (transforms.length - 1))
     ]
+    // PequeÃ±o delay entre activaciones para mantener orden correcto de timestamps
+    const srcSlot = padSlots.find((s) => s.functionId === randSrc.id && !s.isExtra)
+    const t1Slot = padSlots.find((s) => s.functionId === randT1.id && !s.isExtra)
+    const t2Slot = padSlots.find((s) => s.functionId === randT2.id && !s.isExtra)
+    if (srcSlot) toggleSlot(srcSlot.instanceId)
+    if (t1Slot) setTimeout(() => toggleSlot(t1Slot.instanceId), 10)
+    if (t2Slot) setTimeout(() => toggleSlot(t2Slot.instanceId), 20)
+  }, [clearAll, padSlots, toggleSlot])
 
-    // Pequeño delay entre activaciones para mantener orden correcto de timestamps
-    activatePad(randSrc.id)
-    setTimeout(() => activatePad(randT1.id), 10)
-    setTimeout(() => activatePad(randT2.id), 20)
-  }, [clearAll, activatePad])
-
-  // Filtrar pads visibles según categoría seleccionada
-  const visibleFunctions = selectedCategory
-    ? HYDRA_REGISTRY.filter((fn) => fn.category === selectedCategory).slice(0, 16)
-    : HYDRA_REGISTRY.slice(0, 16)
-
-  // Pads activos con parámetros propios o con fuente secundaria configurable
+  // Pads activos con parÃ¡metros propios o con fuente secundaria configurable
   const activePadsWithParams = activePads.filter((p) => {
     const fn = HYDRA_REGISTRY.find((fn) => fn.id === p.functionId)
     return (fn?.params.length ?? 0) > 0 || !!fn?.secondarySourceId
@@ -93,41 +89,12 @@ export function MachineLayout() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Category filter bar */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className={cn(
-            "font-mono text-[9px] uppercase tracking-wider px-2 py-1 rounded border transition-colors",
-            selectedCategory === null
-              ? "border-white/40 text-white bg-white/10"
-              : "border-white/10 text-white/30 hover:border-white/20"
-          )}
-        >
-          ALL
-        </button>
-        {CATEGORY_ORDER.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
-            className={cn(
-              "font-mono text-[9px] uppercase tracking-wider px-2 py-1 rounded border transition-colors"
-            )}
-            style={
-              selectedCategory === cat
-                ? {
-                    borderColor: CATEGORY_COLORS[cat],
-                    color: CATEGORY_COLORS[cat],
-                    backgroundColor: `${CATEGORY_COLORS[cat]}22`,
-                  }
-                : { borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.3)" }
-            }
-          >
-            {CATEGORY_LABELS[cat]}
-          </button>
-        ))}
-
-        <div className="ml-auto flex gap-1">
+      {/* Header con controles globales */}
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[9px] text-white/20 uppercase tracking-widest">
+          Pads
+        </span>
+        <div className="flex gap-1">
           <button
             onClick={handleRandomize}
             title="Random patch"
@@ -137,7 +104,7 @@ export function MachineLayout() {
           </button>
           <button
             onClick={clearAll}
-            title="Clear all (Tranquilizador)"
+            title="Clear all"
             className="p-1.5 rounded border border-white/10 text-white/30 hover:border-red-500/40 hover:text-red-400/60 transition-colors"
           >
             <Trash2 className="w-3 h-3" />
@@ -145,43 +112,28 @@ export function MachineLayout() {
         </div>
       </div>
 
-      {/* 4×4 Pad Grid */}
+      {/* Secciones por categorÃ­a */}
       <div
-        className="glass-card p-3 rounded-xl border border-white/5"
+        className="glass-card p-3 rounded-xl border border-white/5 flex flex-col gap-5"
         style={{ background: "rgba(0,0,0,0.6)" }}
       >
-        <div className="grid grid-cols-4 gap-2">
-          {visibleFunctions.map((fn) => {
-            const activePad = activePads.find((p) => p.functionId === fn.id)
-            const isActive = !!activePad
-            const mode = getModeFor(fn.id)
-
-            return (
-              <Pad
-                key={fn.id}
-                functionDef={fn}
-                isActive={isActive}
-                mode={mode}
-                onToggle={() => togglePad(fn.id)}
-                onMomentaryStart={() => handleMomentaryStart(fn.id)}
-                onMomentaryEnd={() => handleMomentaryEnd(fn.id)}
-                onModeChange={(m) => handleModeChange(fn.id, m)}
-              />
-            )
-          })}
-
-          {/* Relleno si hay menos de 16 funciones visibles en el filtro */}
-          {visibleFunctions.length < 16 &&
-            Array.from({ length: 16 - visibleFunctions.length }).map((_, i) => (
-              <div
-                key={`empty-${i}`}
-                className="rounded-lg border border-white/5 bg-black/20 min-h-[72px]"
-              />
-            ))}
-        </div>
+        {CATEGORY_ORDER.map((cat) => (
+          <SectionRow
+            key={cat}
+            category={cat}
+            padSlots={padSlots}
+            padModes={padModes}
+            onToggleSlot={toggleSlot}
+            onRemoveSlot={removeSlot}
+            onAddSlot={addSlot}
+            onModeChange={handleModeChange}
+            onMomentaryStart={handleMomentaryStart}
+            onMomentaryEnd={handleMomentaryEnd}
+          />
+        ))}
 
         {/* Global faders row */}
-        <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-white/5">
+        <div className="grid grid-cols-4 gap-2 pt-3 border-t border-white/5">
           {GLOBAL_FADERS.map((fader) => (
             <GlobalFader
               key={fader.id}
@@ -219,7 +171,7 @@ export function MachineLayout() {
   )
 }
 
-// ── Global Fader ────────────────────────────────────────────────────────────
+// â”€â”€ Global Fader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface GlobalFaderConfig {
   id: string
