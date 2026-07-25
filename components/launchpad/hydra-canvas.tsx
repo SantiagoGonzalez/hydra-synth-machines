@@ -3,7 +3,7 @@
 // Canvas WebGL aislado para el launchpad: inicializa hydra-synth y reevalúa la cadena compilada
 
 import { useRef, useEffect, useState, useCallback } from "react"
-import { Maximize2, AlertCircle, Pin, Heart } from "lucide-react"
+import { Maximize2, AlertCircle, Heart } from "lucide-react"
 import { useChainStore } from "@/stores/chain-store"
 import { useFavoritesStore } from "@/stores/favorites-store"
 import { createHydraEvaluator, type HydraEvaluator } from "@/lib/chain-evaluator"
@@ -19,7 +19,6 @@ export function HydraCanvas() {
   const [error, setError] = useState<string | null>(null)
   const [isFlashing, setIsFlashing] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [isSticky, setIsSticky] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
 
   const compiledCode = useChainStore((s) => s.compiledCode)
@@ -108,10 +107,12 @@ export function HydraCanvas() {
   }, [])
 
   return (
-    <div className={cn(
-      "relative group rounded-xl overflow-hidden border border-white/10 bg-black",
-      isSticky && "sticky top-2 z-40"
-    )}>
+    <div
+      className={cn(
+        "relative group rounded-xl overflow-hidden border border-white/10 bg-black",
+        "w-full h-auto max-h-full aspect-video"
+      )}
+    >
       {/* Glow border */}
       <div
         className={cn(
@@ -128,7 +129,7 @@ export function HydraCanvas() {
 
       <canvas
         ref={canvasRef}
-        className="relative z-1 w-full aspect-video bg-black block"
+        className="relative z-1 w-full h-full bg-black block"
       />
 
       {/* Sticky + Fullscreen buttons */}
@@ -137,6 +138,7 @@ export function HydraCanvas() {
         "opacity-0 group-hover:opacity-100 transition-opacity"
       )}>
         <button
+          type="button"
           onClick={handleSaveToFavorites}
           className={cn(
             "p-1.5 border rounded-lg transition-colors",
@@ -149,18 +151,7 @@ export function HydraCanvas() {
           <Heart className={cn("w-3.5 h-3.5", isSaved && "fill-current")} />
         </button>
         <button
-          onClick={() => setIsSticky((s) => !s)}
-          className={cn(
-            "p-1.5 border rounded-lg transition-colors",
-            isSticky
-              ? "bg-white/15 border-white/30 text-white/80"
-              : "bg-black/60 hover:bg-black/80 border-white/10 text-white/50"
-          )}
-          title="Toggle sticky"
-        >
-          <Pin className="w-3.5 h-3.5" />
-        </button>
-        <button
+          type="button"
           onClick={toggleFullscreen}
           className="p-1.5 bg-black/60 hover:bg-black/80 border border-white/10 rounded-lg text-white/50"
           title="Toggle fullscreen"

@@ -31,7 +31,7 @@ function tokenize(code: string): CodeSegment[] {
   return segments
 }
 
-export function ChainPreview() {
+export function ChainPreview({ compact = false }: { compact?: boolean }) {
   const compiledCode = useChainStore((s) => s.compiledCode)
   const activePads = useChainStore((s) => s.activePads)
 
@@ -42,13 +42,14 @@ export function ChainPreview() {
   return (
     <div
       className={cn(
-        "glass-card rounded-xl border border-white/5 p-3 font-mono",
+        "glass-card rounded-xl border border-white/5 font-mono shrink-0",
+        compact ? "px-3 py-2" : "p-3",
         "transition-all duration-300",
         isEmpty ? "opacity-40" : "opacity-100"
       )}
       style={{ background: "rgba(0,0,0,0.6)" }}
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className={cn("flex items-center justify-between", compact ? "mb-1" : "mb-2")}>
         <span className="text-[9px] text-white/20 uppercase tracking-wider">Chain</span>
         <span className="text-[9px] text-white/20 tabular-nums">
           {activePads.length} active
@@ -62,7 +63,10 @@ export function ChainPreview() {
             initial={{ opacity: 0.4 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.1 }}
-            className="text-[11px] leading-relaxed whitespace-nowrap pb-1"
+            className={cn(
+              "leading-relaxed whitespace-nowrap",
+              compact ? "text-[10px]" : "text-[11px] pb-1"
+            )}
           >
             {segments.map((seg, i) => (
               <span
@@ -76,8 +80,7 @@ export function ChainPreview() {
         </AnimatePresence>
       </div>
 
-      {/* Active pad chain indicators */}
-      {activePads.length > 0 && (
+      {!compact && activePads.length > 0 && (
         <div className="flex items-center gap-1 mt-2 pt-2 border-t border-white/5 flex-wrap">
           {[...activePads]
             .sort((a, b) => a.activatedAt - b.activatedAt)

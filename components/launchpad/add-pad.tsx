@@ -40,9 +40,9 @@ export function AddPad({ category, functions, onAdd }: AddPadProps) {
       <PopoverTrigger asChild>
         <motion.div
           className={cn(
-            "relative flex flex-col items-center justify-center rounded-lg cursor-pointer select-none",
+            "relative flex flex-col items-center justify-center rounded-lg cursor-pointer select-none w-full h-full",
             "border border-dashed transition-colors duration-150",
-            "p-2 min-h-[72px] min-w-[64px]",
+            "p-1.5",
             open
               ? "border-[var(--add-color)] bg-[var(--add-color)]/10"
               : "border-white/15 bg-black/20 hover:border-[var(--add-color)]/50 hover:bg-[var(--add-color)]/5"

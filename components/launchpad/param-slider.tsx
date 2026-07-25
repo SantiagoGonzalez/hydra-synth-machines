@@ -1,8 +1,8 @@
 "use client"
 
-// Panel de controles de parámetros para un pad activo, con sliders verticales por parámetro
+// Panel de controles de parámetros para un pad activo, con sliders horizontales por parámetro
 
-import { useCallback, useRef } from "react"
+import { useCallback, useRef, useState } from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import { CATEGORY_COLORS, getFunctionDef, getSourceOptions, type HydraParam } from "@/lib/hydra-registry"
 import { useChainStore, type ActivePad } from "@/stores/chain-store"
@@ -17,8 +17,8 @@ interface ParamSliderProps {
 
 function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) {
   const rafRef = useRef<number | null>(null)
+  const [draft, setDraft] = useState<string | null>(null)
 
-  // Debounce al siguiente frame de animación para garantizar 60fps
   const handleChange = useCallback(
     ([newVal]: number[]) => {
       if (rafRef.current !== null) {
@@ -34,26 +34,50 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
 
   const displayValue = Math.round(value * 1000) / 1000
 
-  return (
-    <div className="flex flex-col items-center gap-1 min-w-0">
-      {/* Nombre del parámetro */}
-      <span className="font-mono text-[9px] text-white/40 uppercase tracking-wider truncate max-w-[40px] text-center">
-        {param.name}
-      </span>
+  const commitDraft = useCallback(() => {
+    if (draft === null) return
+    const parsed = Number(draft)
+    if (!Number.isNaN(parsed)) {
+      const clamped = Math.min(param.max, Math.max(param.min, parsed))
+      onChange(clamped)
+    }
+    setDraft(null)
+  }, [draft, onChange, param.max, param.min])
 
-      {/* Slider vertical */}
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[9px] text-white/40 uppercase tracking-wider truncate">
+          {param.name}
+        </span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={draft ?? String(displayValue)}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              commitDraft()
+              ;(e.target as HTMLInputElement).blur()
+            }
+          }}
+          className="w-14 font-mono text-[8px] text-white/50 tabular-nums bg-white/5 border border-white/10 rounded px-1 py-0.5 text-right focus:outline-none focus:ring-1 focus:ring-white/30"
+        />
+      </div>
       <SliderPrimitive.Root
-        className="relative flex flex-col items-center touch-none select-none h-20 w-4"
-        orientation="vertical"
+        className="relative flex w-full touch-none select-none items-center h-4"
+        orientation="horizontal"
         min={param.min}
         max={param.max}
         step={param.step}
         value={[value]}
         onValueChange={handleChange}
       >
-        <SliderPrimitive.Track className="relative w-1 h-full grow rounded-full bg-white/10">
+        <SliderPrimitive.Track className="relative h-1 w-full grow rounded-full bg-white/10">
           <SliderPrimitive.Range
-            className="absolute bottom-0 w-full rounded-full transition-none"
+            className="absolute h-full rounded-full transition-none"
             style={{ backgroundColor: color }}
           />
         </SliderPrimitive.Track>
@@ -66,11 +90,6 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
           style={{ backgroundColor: color }}
         />
       </SliderPrimitive.Root>
-
-      {/* Valor actual */}
-      <span className="font-mono text-[8px] text-white/50 tabular-nums">
-        {displayValue}
-      </span>
     </div>
   )
 }
@@ -89,7 +108,6 @@ export function PadParamPanel({ pad }: PadParamPanelProps) {
 
   if (!def) return null
 
-  // Número de instancia visible si hay más de un slot activo para este functionId
   const activeOfSameType = padSlots.filter((s) => s.functionId === pad.functionId && s.isActive)
   const instanceIndex = activeOfSameType.findIndex((s) => s.instanceId === pad.instanceId)
   const instanceLabel =
@@ -108,20 +126,18 @@ export function PadParamPanel({ pad }: PadParamPanelProps) {
   }
 
   const mainColor = CATEGORY_COLORS[pad.category]
-  // Color de fuente secundaria — categoria source
   const sourceColor = CATEGORY_COLORS["source"]
   const sourceOptions = getSourceOptions()
   const selectedSecDef = selectedSourceId ? getFunctionDef(selectedSourceId) : undefined
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <span className="font-mono text-[10px] font-semibold" style={{ color: mainColor }}>
         {def.label}{instanceLabel}
       </span>
 
-      {/* Parámetros principales del pad */}
       {hasMainParams && (
-        <div className="flex gap-3 items-end">
+        <div className="flex flex-col gap-3">
           {def.params.map((param) => (
             <SingleParamSlider
               key={param.name}
@@ -134,23 +150,20 @@ export function PadParamPanel({ pad }: PadParamPanelProps) {
         </div>
       )}
 
-      {/* Selector de fuente secundaria + sus parámetros */}
       {hasSecondary && (
-        <div className="flex flex-col gap-1.5 pt-1.5 border-t border-white/10">
+        <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
           <span className="font-mono text-[9px] text-white/30 uppercase tracking-wider">
             source
           </span>
-          {/* Botones de selección de fuente */}
           <div className="flex gap-1 flex-wrap">
             {sourceOptions.map((src) => {
               const isSelected = src.id === selectedSourceId
               return (
                 <button
                   key={src.id}
+                  type="button"
                   onClick={() => updateSecondarySource(pad.instanceId, src.id)}
-                  className={cn(
-                    "font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors"
-                  )}
+                  className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors"
                   style={
                     isSelected
                       ? {
@@ -170,9 +183,8 @@ export function PadParamPanel({ pad }: PadParamPanelProps) {
             })}
           </div>
 
-          {/* Sliders de parámetros de la fuente secundaria seleccionada */}
           {selectedSecDef && selectedSecDef.params.length > 0 && (
-            <div className="flex gap-3 items-end mt-0.5">
+            <div className="flex flex-col gap-3 mt-1">
               {selectedSecDef.params.map((param) => (
                 <SingleParamSlider
                   key={param.name}

@@ -49,8 +49,12 @@ interface ChainState {
   compiledCode: string
   lastSafeCode: string
   outputBuffer: "o0" | "o1" | "o2" | "o3"
+  /** Slot seleccionado para el panel de detalle; null = mostrar el activo más reciente */
+  selectedSlotId: string | null
 
   toggleSlot: (slotId: string) => void
+  selectSlot: (slotId: string | null) => void
+  setSlotMode: (slotId: string, mode: "toggle" | "momentary") => void
   addSlot: (functionId: string) => void
   removeSlot: (slotId: string) => void
   /** @deprecated usar toggleSlot para toggle; se mantiene para momentary */
@@ -82,6 +86,19 @@ export const useChainStore = create<ChainState>((set, get) => ({
   compiledCode: "solid(0,0,0).out()",
   lastSafeCode: "solid(0,0,0).out()",
   outputBuffer: "o0",
+  selectedSlotId: null,
+
+  selectSlot: (slotId) => {
+    set({ selectedSlotId: slotId })
+  },
+
+  setSlotMode: (slotId, mode) => {
+    set((state) => ({
+      padSlots: state.padSlots.map((s) =>
+        s.instanceId === slotId ? { ...s, mode } : s
+      ),
+    }))
+  },
 
   // Alterna el estado activo de un slot especÃ­fico por su slotId
   toggleSlot: (slotId) => {
@@ -127,7 +144,9 @@ export const useChainStore = create<ChainState>((set, get) => ({
       const padSlots = state.padSlots.filter((s) => s.instanceId !== slotId)
       const activePads = deriveActivePads(padSlots)
       const compiledCode = rebuild(activePads, state.outputBuffer)
-      return { padSlots, activePads, compiledCode }
+      const selectedSlotId =
+        state.selectedSlotId === slotId ? null : state.selectedSlotId
+      return { padSlots, activePads, compiledCode, selectedSlotId }
     })
   },
 
@@ -166,7 +185,9 @@ export const useChainStore = create<ChainState>((set, get) => ({
           )
       const activePads = deriveActivePads(padSlots)
       const compiledCode = rebuild(activePads, state.outputBuffer)
-      return { padSlots, activePads, compiledCode }
+      const selectedSlotId =
+        state.selectedSlotId === instanceId ? null : state.selectedSlotId
+      return { padSlots, activePads, compiledCode, selectedSlotId }
     })
   },
 
@@ -224,6 +245,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       padSlots: state.padSlots.map((s) => ({ ...s, isActive: false })),
       activePads: [],
       compiledCode: safe,
+      selectedSlotId: null,
     }))
   },
 
@@ -279,9 +301,24 @@ export const useChainStore = create<ChainState>((set, get) => ({
     const padSlots = [...freshSlots, ...extraSlots]
     const activePads = deriveActivePads(padSlots)
     const compiledCode = rebuild(activePads, outputBuffer)
-    set({ padSlots, activePads, compiledCode })
+    set({ padSlots, activePads, compiledCode, selectedSlotId: null })
   },
 }))
+
+/** Selector: pad activo más reciente (fallback cuando no hay selección) */
+export function selectMostRecentActivePad(state: ChainState) {
+  if (state.activePads.length === 0) return null
+  return [...state.activePads].sort((a, b) => b.activatedAt - a.activatedAt)[0]
+}
+
+/** Selector: slot a mostrar en el panel de detalle */
+export function selectDetailPad(state: ChainState): ActivePad | null {
+  if (state.selectedSlotId) {
+    const slot = state.padSlots.find((s) => s.instanceId === state.selectedSlotId)
+    if (slot) return slot
+  }
+  return selectMostRecentActivePad(state)
+}
 
 /** Selector: Â¿estÃ¡ algÃºn slot de un functionId activo? */
 export function selectIsPadActive(functionId: string) {

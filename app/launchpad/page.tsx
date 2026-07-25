@@ -1,60 +1,58 @@
 "use client"
 
-// Página del launchpad VJ: orquesta el grid de pads, el canvas Hydra y el preview de cadena
+// Página del launchpad VJ: layout de 3 zonas con canvas, panel de params y banda de pads
 
 import Link from "next/link"
 import { ArrowLeft, Radio } from "lucide-react"
-import { MachineLayout } from "@/components/launchpad/machine-layout"
-import { HydraCanvas } from "@/components/launchpad/hydra-canvas"
-import { ChainPreview } from "@/components/launchpad/chain-preview"
-import { FavoritesLibrary } from "@/components/launchpad/favorites-library"
+import { StageColumn } from "@/components/launchpad/stage-column"
+import { ParamPanel } from "@/components/launchpad/param-panel"
+import { PadBand } from "@/components/launchpad/pad-band"
+import { FavoritesDialog } from "@/components/launchpad/favorites-dialog"
 
 export default function LaunchpadPage() {
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 font-mono text-[10px] text-white/30 hover:text-white/60 transition-colors uppercase tracking-wider"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          Back to docs
-        </Link>
-
-        <div className="flex items-center gap-2">
-          <Radio className="w-3.5 h-3.5 text-[#44ff88] animate-pulse" />
-          <span className="font-mono text-[11px] text-white/60 tracking-widest uppercase">
-            Hydra Launchpad
-          </span>
-        </div>
-
-        <div className="font-mono text-[9px] text-white/15 uppercase tracking-wider">
-          Machine v1
-        </div>
-      </header>
-
-      {/* Main layout */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 max-w-screen-xl mx-auto w-full">
-        {/* Left column: pad grid + params */}
-        <section className="flex flex-col gap-4 min-w-0">
-          <MachineLayout />
-        </section>
-
-        {/* Right column: canvas + chain preview + favorites */}
-        <section className="flex flex-col gap-4 min-w-0">
-          <HydraCanvas />
-          <ChainPreview />
-          <FavoritesLibrary />
-        </section>
-      </main>
-
-      {/* Footer hint */}
-      <footer className="px-4 py-2 border-t border-white/5">
-        <p className="font-mono text-[9px] text-white/15 text-center tracking-wider">
-          tap pads to build a chain · adjust sliders for live control · T = toggle · M = momentary
+    <>
+      {/* Desktop-only gate */}
+      <div className="lg:hidden fixed inset-0 z-50 bg-black flex items-center justify-center p-6">
+        <p className="font-mono text-sm text-white/40 text-center leading-relaxed">
+          Hydra Launchpad requires a desktop viewport (≥1024px).
         </p>
-      </footer>
-    </div>
+      </div>
+
+      <div className="hidden lg:flex h-screen flex-col overflow-hidden bg-black text-white">
+        <header className="shrink-0 h-9 flex items-center justify-between px-3 border-b border-white/5">
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 font-mono text-[9px] text-white/30 hover:text-white/60 transition-colors uppercase tracking-wider"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Back
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <Radio className="w-3 h-3 text-[#44ff88] animate-pulse" />
+            <span className="font-mono text-[10px] text-white/60 tracking-widest uppercase">
+              Hydra Launchpad
+            </span>
+          </div>
+
+          <FavoritesDialog />
+        </header>
+
+        <main className="flex-1 min-h-0 grid grid-rows-[2fr_1fr]">
+          <div className="min-h-0 grid grid-cols-[1fr_360px] gap-3 p-3">
+            <StageColumn />
+            <ParamPanel />
+          </div>
+          <PadBand />
+        </main>
+
+        <footer className="shrink-0 px-3 py-1.5 border-t border-white/5">
+          <p className="font-mono text-[8px] text-white/15 text-center tracking-wider">
+            1–5 tabs · click toggle · ctrl/alt+click select · right-click select · T/M mode on pad
+          </p>
+        </footer>
+      </div>
+    </>
   )
 }

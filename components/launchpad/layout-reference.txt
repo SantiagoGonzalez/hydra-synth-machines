@@ -1,0 +1,13 @@
+Diseña una interfaz de usuario organizada en tres tercios verticales.
+
+- El tercio inferior ocupa el ancho completo de la pantalla y está dedicado exclusivamente a la sección "PADS".
+- Los dos tercios superiores forman el área principal de trabajo y se dividen horizontalmente en dos columnas.
+
+Distribución de la zona superior:
+- Columna izquierda (aprox. 65–70% del ancho): "Hydra Canvas", el espacio principal de edición y visualización.
+- Columna derecha (aprox. 30–35% del ancho): "Param Detail Panel", destinado a la edición detallada de parámetros del elemento seleccionado.
+
+El resultado debe transmitir una jerarquía clara:
+1. Hydra Canvas como foco principal.
+2. Param Detail Panel como panel de inspección lateral.
+3. PADS como una banda inferior de ancho completo para acceso permanente y navegación rápida.
