@@ -40,7 +40,7 @@ export default function LaunchpadPage() {
         </header>
 
         <main className="flex-1 min-h-0 grid grid-rows-[2fr_1fr]">
-          <div className="min-h-0 grid grid-cols-[1fr_360px] gap-3 p-3">
+          <div className="min-h-0 grid grid-cols-[1fr_minmax(380px,30%)] gap-3 p-3">
             <StageColumn />
             <ParamPanel />
           </div>

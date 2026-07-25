@@ -101,13 +101,13 @@ export function Pad({
   return (
     <motion.div
       className={cn(
-        "relative flex flex-col items-center justify-between rounded-lg cursor-pointer select-none w-full h-full",
+        "relative flex flex-col items-center justify-center gap-1 rounded-lg cursor-pointer select-none w-full h-full overflow-hidden",
         "border transition-colors duration-150",
         "p-1.5",
         isActive
           ? "border-[var(--pad-color)] bg-[var(--pad-color)]/15"
           : "border-white/10 bg-black/40 hover:border-white/20 hover:bg-white/5",
-        isSelected && "ring-2 ring-white/50 ring-offset-1 ring-offset-black"
+        isSelected && "ring-2 ring-inset ring-white/60"
       )}
       style={{ "--pad-color": color } as React.CSSProperties}
       onPointerDown={handlePointerDown}
@@ -118,12 +118,12 @@ export function Pad({
         isActive
           ? {
               boxShadow: [
-                `0 0 8px ${color}60`,
-                `0 0 16px ${color}80`,
-                `0 0 8px ${color}60`,
+                `inset 0 0 8px ${color}55`,
+                `inset 0 0 18px ${color}88`,
+                `inset 0 0 8px ${color}55`,
               ],
             }
-          : { boxShadow: "0 0 0px transparent" }
+          : { boxShadow: "inset 0 0 0px transparent" }
       }
       transition={
         isActive
@@ -153,7 +153,7 @@ export function Pad({
 
       <span
         className={cn(
-          "font-mono text-[9px] font-semibold text-center leading-tight mt-0.5 px-0.5 truncate w-full",
+          "font-mono text-[9px] font-semibold text-center leading-tight px-0.5 truncate w-full",
           isActive ? "text-white" : "text-white/50"
         )}
         style={isActive ? { color } : undefined}

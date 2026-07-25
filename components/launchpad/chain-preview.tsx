@@ -56,7 +56,7 @@ export function ChainPreview({ compact = false }: { compact?: boolean }) {
         </span>
       </div>
 
-      <div className="relative overflow-x-auto">
+      <div className="relative overflow-x-auto scrollbar-thin">
         <AnimatePresence mode="wait">
           <motion.div
             key={compiledCode}

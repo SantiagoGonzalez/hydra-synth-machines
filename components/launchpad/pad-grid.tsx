@@ -13,7 +13,9 @@ import { Pad } from "@/components/launchpad/pad"
 import { AddPad } from "@/components/launchpad/add-pad"
 import { cn } from "@/lib/utils"
 
+const GRID_COLS = 8
 const GRID_MIN_CELLS = 16
+const MIN_ROW_PX = 56
 
 interface PadGridProps {
   category: HydraCategory
@@ -63,19 +65,23 @@ export function PadGrid({
 
   const totalCells = Math.max(GRID_MIN_CELLS, orderedSlots.length + 1)
   const placeholderCount = totalCells - orderedSlots.length - 1
+  const rowCount = Math.ceil(totalCells / GRID_COLS)
 
   return (
     <div
       role="tabpanel"
       id={`pad-panel-${category}`}
       aria-labelledby={`pad-tab-${category}`}
-      className="grid grid-cols-8 gap-1 auto-rows-fr"
+      className="grid grid-cols-8 gap-1 h-full"
+      style={{
+        gridTemplateRows: `repeat(${rowCount}, minmax(${MIN_ROW_PX}px, 1fr))`,
+      }}
     >
       {orderedSlots.map((slot) => {
         const fn = getFunctionDef(slot.functionId)
         if (!fn) return null
         return (
-          <div key={slot.instanceId} className="aspect-square min-w-0">
+          <div key={slot.instanceId} className="min-w-0 min-h-0">
             <Pad
               functionDef={fn}
               isActive={slot.isActive}
@@ -94,7 +100,7 @@ export function PadGrid({
         )
       })}
 
-      <div className="aspect-square min-w-0">
+      <div className="min-w-0 min-h-0">
         <AddPad category={category} functions={categoryFunctions} onAdd={onAddSlot} />
       </div>
 
@@ -102,7 +108,7 @@ export function PadGrid({
         <div
           key={`placeholder-${i}`}
           className={cn(
-            "aspect-square min-w-0 rounded-lg border border-dashed border-white/5 bg-black/20"
+            "min-w-0 min-h-0 rounded-lg border border-dashed border-white/5 bg-black/20"
           )}
           aria-hidden
         />
