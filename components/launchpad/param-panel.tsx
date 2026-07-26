@@ -27,18 +27,6 @@ export function ParamPanel() {
         Parameters
       </p>
 
-      {detailPad ? (
-        <div className="flex flex-col gap-3">
-          <PadParamPanel pad={detailPad} />
-        </div>
-      ) : (
-        <div className="flex items-center justify-center py-8 text-white/20 font-mono text-[10px] text-center">
-          no pad selected
-          <br />
-          <span className="text-white/10">activate or select a pad</span>
-        </div>
-      )}
-
       {otherActivePads.length > 0 && (
         <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
           <p className="font-mono text-[9px] text-white/20 uppercase tracking-wider">
@@ -69,6 +57,20 @@ export function ParamPanel() {
           </div>
         </div>
       )}
+
+
+      {detailPad ? (
+        <div className="flex flex-col gap-3">
+          <PadParamPanel pad={detailPad} />
+        </div>
+      ) : (
+        <div className="flex items-center justify-center py-8 text-white/20 font-mono text-[10px] text-center">
+          no pad selected
+          <br />
+          <span className="text-white/10">activate or select a pad</span>
+        </div>
+      )}
+
 
       <GlobalFaders />
     </aside>

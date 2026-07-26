@@ -98,13 +98,17 @@ Layout inspiration from physical MIDI controllers (see `docs/machines-layout-ref
 
 ## Machine Types
 
-### Current: Basic Grid (v1)
+### Current: Launchpad v1 (3-zone layout)
 
-- 4×4 pad grid (16 cells from `HYDRA_REGISTRY`)
-- Category filter bar (source, geometry, color, modulate, blend)
-- 4 global faders (speed, brightness, decay, amount)
-- Per-pad param panel with vertical sliders
-- Single output buffer
+- Fixed viewport `h-screen`: StageColumn + ParamPanel (top) + PadBand (bottom third)
+- 5 category tabs (keys 1–5): source, geometry, color, modulate, blend
+- 8×2 pad grid per tab (landscape cells); AddPad for extra slots
+- Param panel: selected pad detail + active chips + horizontal sliders
+- 4 global faders in ParamPanel (local state, not wired to compiler)
+- ChainPreview compact under canvas; favorites in header dialog
+- Keyboard phase 1: tab switching only (`use-launchpad-keys.ts`)
+
+See `skills/launchpad-layout.skill.md` and `skills/pad-band-and-grid.skill.md`.
 
 ### Future Possibilities
 

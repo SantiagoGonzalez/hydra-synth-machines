@@ -25,13 +25,20 @@ Guía para mantener y extender el sistema de favoritos del launchpad VJ — la b
 ```
 stores/
 ├── favorites-store.ts      ← Zustand + persist: FavoriteChain[], saveFavorite, removeFavorite, renameFavorite
-└── chain-store.ts          ← restoreFromFavorite(pads) → replaces activePads, recompiles chain
+└── chain-store.ts          ← restoreFromFavorite(pads) → rebuilds padSlots, recompiles chain
 
 components/launchpad/
 ├── hydra-canvas.tsx        ← Heart button: captures thumbnail + calls saveFavorite
 ├── hydra-thumbnail.tsx     ← Cached <img> display (static, no live canvas)
-└── favorites-library.tsx   ← Collapsible grid of FavoriteCards with load/delete
+├── favorites-dialog.tsx    ← Dialog modal: grid of FavoriteCards with load/delete (header trigger)
+└── favorites-library.tsx   ← Legacy collapsible component (unused in current layout; prefer dialog)
 ```
+
+### UI Placement
+
+- **Current**: `FavoritesDialog` en el header de `app/launchpad/page.tsx`
+- Load cierra el dialog automáticamente (`setOpen(false)`)
+- Empty state guía al botón Heart del canvas
 
 ### Data Flow
 
@@ -40,7 +47,7 @@ components/launchpad/
     → canvas.toDataURL("image/webp", 0.6)          ← thumbnail captured once at save time
     → saveFavorite({ activePads, compiledCode, thumbnailDataUrl })
     → favorites-store: [newFav, ...state.favorites]
-    → FavoritesLibrary re-renders with new card
+    → FavoritesDialog re-renders with new card
 
 [Load click on FavoriteCard]
     → restoreFromFavorite(fav.activePads)           ← chain-store action
@@ -73,8 +80,9 @@ components/launchpad/
 - **Thumbnails are static** — `canvas.toDataURL("image/webp", 0.6)` captured once at save; `HydraThumbnail` renders a plain `<img>`, never a live canvas. This keeps WebGL context count at 1.
 - **instanceId regeneration on restore** — always generate new `instanceId` and `activatedAt` in `restoreFromFavorite`; never reuse saved instanceIds.
 - **Persistence key** — localStorage key is `"hydra-favorites"`. Do not rename without a migration strategy.
-- **Label derivation** — `deriveLabel(code)` extracts the first function + up to 2 chained calls: e.g. `osc·colorama·modulate`. Sliced to 28 chars. Lives in `favorites-library.tsx`.
-- **FavoritesLibrary is always rendered** — never conditionally remove the component; the empty state guides users to the Heart button.
+- **Label derivation** — `deriveLabel(code)` in `favorites-dialog.tsx` (also in legacy `favorites-library.tsx`)
+- **FavoritesDialog** — primary UI; triggered from launchpad header
+- **Legacy FavoritesLibrary** — collapsible inline component; kept for reference, not mounted in current page layout
 - **Heart button state** — `isSaved` turns the icon pink/filled for 1.5 s as confirmation feedback. Implemented with `setTimeout`.
 - **Restore is immediate** — no confirmation dialog; this is a live-performance tool.
 - **Chain order preserved** — `activatedAt` values are reconstructed as `now + i` (sequential) to maintain the original chain position order.
@@ -87,7 +95,7 @@ components/launchpad/
 2. **Changing the thumbnail format** — update the `toDataURL` call in `hydra-canvas.tsx`; `HydraThumbnail` accepts any image URL, so no component changes needed
 3. **Adding rename UX** — `renameFavorite(id, name)` already exists in the store; wire a double-click or inline input on `FavoriteCard`
 4. **Adding import/export** — serialize `favorites` array to JSON; import by calling `saveFavorite` in a loop (generates fresh ids)
-5. **Changing the collapsible behavior** — `isOpen` state is local to `FavoritesLibrary`; default is `true`
+5. **Changing the collapsible behavior** — legacy `FavoritesLibrary` used local `isOpen`; `FavoritesDialog` uses Radix Dialog open state
 
 ---
 

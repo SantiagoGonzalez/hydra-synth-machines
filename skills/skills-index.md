@@ -1,6 +1,6 @@
 # Skills Index
 
-> Lightweight registry. **Project:** hydra-synth-machines | **Last updated:** 2026-05-30 | **Total skills:** 54
+> **Last updated:** 2026-07-25 | **Total skills:** 59
 >
 > **Skill directory:** skills/
 
@@ -107,10 +107,15 @@
 
 | Skill | Path | Level | Purpose | Tags |
 |-------|------|-------|---------|------|
-| Launchpad Components | `skills/launchpad-components.skill.md` | atomic | Guide for iterating on launchpad pad grid, canvas, chain system, and controls | launchpad, components, pads, iteration |
-| Section Rows & Add Pad | `skills/section-rows-and-add-pad.skill.md` | composite | Architecture of section-based layout, PadSlot model, and dynamic "+" pad with command palette | launchpad, sections, pad-slots, add-pad, dynamic |
-| Machines | `skills/machines.skill.md` | composite | Defines what a machine is: a configured layout of controls mapped to Hydra functions forming a visual instrument | machine, architecture, layout, instrument |
-| Favorites Library | `skills/favorites-library.skill.md` | atomic | Save, display, and restore Hydra chains as bookmarks with cached thumbnail previews | launchpad, favorites, persistence, thumbnail |
+| Launchpad Components | `skills/launchpad-components.skill.md` | composite | 3-zone launchpad: pad band, param panel, canvas, chain store, data flow | launchpad, components, pads, layout |
+| Pad Band & Grid | `skills/pad-band-and-grid.skill.md` | composite | Tab bar, 8×2 grid, AddPad, slot ordering, pad interactions | launchpad, pads, grid, tabs |
+| Launchpad Layout | `skills/launchpad-layout.skill.md` | atomic | Fixed viewport shell, zone proportions, min-h-0 scroll chain | launchpad, layout, viewport |
+| Launchpad Keyboard | `skills/launchpad-keyboard.skill.md` | atomic | Tab keys 1–5, future positional pad mapping | launchpad, keyboard, hotkeys |
+| Param Panel | `skills/param-panel.skill.md` | composite | Pad detail, active chips, sliders, secondary source, global faders; refactor roadmap | launchpad, params, sliders, selection |
+| UI Scrollbar Thin | `skills/ui-scrollbar-thin.skill.md` | atomic | Reusable `.scrollbar-thin` utility for minimal scrollbars | ui, css, scrollbar |
+| Section Rows & Add Pad | `skills/section-rows-and-add-pad.skill.md` | composite | **Obsolete** — see Pad Band & Grid | launchpad, deprecated |
+| Machines | `skills/machines.skill.md` | composite | Machine as visual instrument: controls mapped to Hydra functions | machine, architecture, layout, instrument |
+| Favorites Library | `skills/favorites-library.skill.md` | atomic | Save, display, restore Hydra chains via dialog + thumbnails | launchpad, favorites, persistence, thumbnail |
 
 ---
 
@@ -137,7 +142,12 @@
 | Add a skill to this index | `skills/meta/organize-skill-system.skill.md` |
 | Rebuild this index from scratch | `skills/meta/scan-skills.skill.md` |
 | Work on launchpad components or add features | `skills/launchpad-components.skill.md` |
-| Add section rows, modify slot lifecycle, or work with AddPad | `skills/section-rows-and-add-pad.skill.md` |
+| Change pad grid, tabs, or AddPad behavior | `skills/pad-band-and-grid.skill.md` |
+| Adjust launchpad layout proportions or viewport | `skills/launchpad-layout.skill.md` |
+| Add or extend keyboard shortcuts | `skills/launchpad-keyboard.skill.md` |
+| Style scrollbars minimally | `skills/ui-scrollbar-thin.skill.md` |
+| Refactor or extend param panel / sliders / global faders | `skills/param-panel.skill.md` |
+| Add section rows (legacy) | `skills/pad-band-and-grid.skill.md` (replaces section-rows) |
 | Understand or design a new machine layout | `skills/machines.skill.md` |
 | Save, load, or display favorite chains in the library | `skills/favorites-library.skill.md` |
 
