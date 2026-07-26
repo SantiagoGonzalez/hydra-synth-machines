@@ -49,7 +49,6 @@ export function HydraCanvas() {
       evaluator = ev
       evaluatorRef.current = ev
       setIsReady(true)
-      ev.run("solid(0,0,0).out()", true)
     })
 
     return () => {

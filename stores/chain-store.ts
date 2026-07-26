@@ -88,7 +88,14 @@ function computePreviewCode(
   const chain = chains[editingOutput]
   const armed = chain.padSlots.find((s) => s.instanceId === armedSlotId)
   if (!armed) return null
-  const previewPads = [...chain.activePads, armed]
+  const lastActivatedAt = chain.activePads.reduce(
+    (latest, pad) => Math.max(latest, pad.activatedAt),
+    0
+  )
+  const previewPads = [
+    ...chain.activePads,
+    { ...armed, activatedAt: lastActivatedAt + 1, isBypassed: false },
+  ]
   const byOutput = Object.fromEntries(
     OUTPUT_BUFFERS.map((buf) => [
       buf,

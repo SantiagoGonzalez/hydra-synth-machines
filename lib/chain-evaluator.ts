@@ -1,5 +1,7 @@
 // Evaluador de cadenas Hydra: conecta el código compilado con el runtime de hydra-synth
 
+import { EMPTY_CODE } from "@/lib/chain-compiler"
+
 export interface HydraEvaluatorOptions {
   onError?: (message: string) => void
   onSuccess?: () => void
@@ -167,6 +169,8 @@ export async function createHydraEvaluator(
       // ignorar errores en cleanup
     }
   }
+
+  run(EMPTY_CODE, true)
 
   return {
     run,

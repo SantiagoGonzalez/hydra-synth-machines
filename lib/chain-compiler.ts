@@ -7,6 +7,7 @@ import type { ActivePad } from "@/stores/chain-store"
 export type OutputBuffer = "o0" | "o1" | "o2" | "o3"
 export const OUTPUT_BUFFERS: OutputBuffer[] = ["o0", "o1", "o2", "o3"]
 
+export const EMPTY_CODE = "solid(0,0,0).out()"
 const SAFE_SOURCE = "solid(0,0,0)"
 
 /** Resuelve el fragmento de fuente secundaria (función o src(oN)) */
@@ -90,9 +91,9 @@ export function compileChain(
   outputBuffer: OutputBuffer = "o0"
 ): string {
   if (activePads.length === 0) {
-    return `${SAFE_SOURCE}.out()`
+    return EMPTY_CODE
   }
-  return compileChainToBuffer(activePads, outputBuffer) ?? `${SAFE_SOURCE}.out()`
+  return compileChainToBuffer(activePads, outputBuffer) ?? EMPTY_CODE
 }
 
 export interface CompileMultiOptions {
@@ -117,7 +118,7 @@ export function compileMultiChain(
   }
 
   if (blocks.length === 0) {
-    return `${SAFE_SOURCE}.out()`
+    return EMPTY_CODE
   }
 
   if (gridView) {

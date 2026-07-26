@@ -57,6 +57,7 @@ ParamPanel (param-panel.tsx)          ← shell: layout, selección, chips activ
 
 - `armSlot(slotId)` — único punto de entrada (shift+click en pad; futuro shift+tecla)
 - Pad armado NO está en `activePads`; preview vía `previewCode = compile(activePads + armed)`
+- El armado recibe un `activatedAt` sintético posterior al último pad activo para que el preview lo evalúe al final de la cadena, igual que Apply
 - `previewCode` se evalúa SOLO en el mini-canvas PiP (`preview-canvas.tsx`), con instancia Hydra propia montada mientras `armedSlotId != null`
 - El canvas principal (`hydra-canvas.tsx`) corre únicamente `compiledCode`; no cambia hasta Apply
 - Apply disponible en dos lugares: banner "ARMED" del ParamPanel y footer del PiP → `applyArmedSlot`
