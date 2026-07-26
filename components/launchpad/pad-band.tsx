@@ -2,10 +2,11 @@
 
 // Banda inferior de pads: tabs por categoría, grilla 8×2 y controles globales
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { Trash2, Shuffle } from "lucide-react"
 import { HYDRA_REGISTRY, CATEGORIES, type HydraCategory } from "@/lib/hydra-registry"
 import { useChainStore } from "@/stores/chain-store"
+import { orderPadSlotsForCategory } from "@/lib/pad-grid-order"
 import { PadTabBar } from "@/components/launchpad/pad-tab-bar"
 import { PadGrid } from "@/components/launchpad/pad-grid"
 import { useLaunchpadKeys } from "@/hooks/use-launchpad-keys"
@@ -21,10 +22,23 @@ export function PadBand() {
   const selectSlot = useChainStore((s) => s.selectSlot)
   const armSlot = useChainStore((s) => s.armSlot)
   const disarmSlot = useChainStore((s) => s.disarmSlot)
+  const applyArmedSlot = useChainStore((s) => s.applyArmedSlot)
+  const setEditingOutput = useChainStore((s) => s.setEditingOutput)
+  const armedSlotId = useChainStore((s) => s.armedSlotId)
+  const selectedSlotId = useChainStore((s) => s.selectedSlotId)
 
   const [activeCategory, setActiveCategory] = useState<HydraCategory>("source")
+  const [isAddPadOpen, setIsAddPadOpen] = useState(false)
 
-  useLaunchpadKeys(setActiveCategory)
+  const orderedSlots = useMemo(
+    () => orderPadSlotsForCategory(padSlots, activeCategory),
+    [padSlots, activeCategory]
+  )
+
+  const handleCategoryChange = useCallback((category: HydraCategory) => {
+    setIsAddPadOpen(false)
+    setActiveCategory(category)
+  }, [])
 
   const handleToggleSlot = useCallback(
     (slotId: string) => {
@@ -40,6 +54,36 @@ export function PadBand() {
     },
     [selectSlot]
   )
+
+  const handleToggleArm = useCallback(
+    (slot: (typeof orderedSlots)[number]) => {
+      if (armedSlotId === slot.instanceId) {
+        disarmSlot()
+      } else if (!slot.isActive) {
+        armSlot(slot.instanceId)
+      }
+    },
+    [armedSlotId, armSlot, disarmSlot]
+  )
+
+  const handleRemoveSelected = useCallback(() => {
+    if (selectedSlotId) removeSlot(selectedSlotId)
+  }, [removeSlot, selectedSlotId])
+
+  useLaunchpadKeys({
+    orderedSlots,
+    onTabChange: handleCategoryChange,
+    onOutputChange: setEditingOutput,
+    onOpenAddPad: () => setIsAddPadOpen(true),
+    onToggleSlot: handleToggleSlot,
+    onSelectSlot: handleSelectSlot,
+    onToggleArm: handleToggleArm,
+    onMomentaryStart: holdSlot,
+    onMomentaryEnd: releaseSlot,
+    onApplyArmed: applyArmedSlot,
+    onDisarm: disarmSlot,
+    onRemoveSelected: handleRemoveSelected,
+  })
 
   const handleRandomize = useCallback(() => {
     clearAll()
@@ -61,7 +105,7 @@ export function PadBand() {
   return (
     <section className="min-h-0 flex flex-col border-t border-white/5 bg-black/40">
       <div className="shrink-0 flex items-center justify-between gap-3 px-3 py-2 border-b border-white/5">
-        <PadTabBar activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
+          <PadTabBar activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         <div className="flex gap-1 shrink-0">
           <button
             type="button"
@@ -94,6 +138,8 @@ export function PadBand() {
               onDisarmSlot={disarmSlot}
               onRemoveSlot={removeSlot}
               onAddSlot={addSlot}
+              isAddPadOpen={isAddPadOpen}
+              onAddPadOpenChange={setIsAddPadOpen}
               onMomentaryStart={holdSlot}
               onMomentaryEnd={releaseSlot}
             />

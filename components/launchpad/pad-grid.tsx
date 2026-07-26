@@ -9,6 +9,8 @@ import {
   type HydraCategory,
 } from "@/lib/hydra-registry"
 import { useChainStore, type PadSlot } from "@/stores/chain-store"
+import { orderPadSlotsForCategory } from "@/lib/pad-grid-order"
+import { keyLabelForIndex } from "@/lib/pad-key-map"
 import { Pad } from "@/components/launchpad/pad"
 import { AddPad } from "@/components/launchpad/add-pad"
 import { cn } from "@/lib/utils"
@@ -25,6 +27,8 @@ interface PadGridProps {
   onDisarmSlot: () => void
   onRemoveSlot: (slotId: string) => void
   onAddSlot: (functionId: string) => void
+  isAddPadOpen: boolean
+  onAddPadOpenChange: (open: boolean) => void
   onMomentaryStart: (slotId: string) => void
   onMomentaryEnd: (slotId: string) => void
 }
@@ -37,6 +41,8 @@ export function PadGrid({
   onDisarmSlot,
   onRemoveSlot,
   onAddSlot,
+  isAddPadOpen,
+  onAddPadOpenChange,
   onMomentaryStart,
   onMomentaryEnd,
 }: PadGridProps) {
@@ -57,22 +63,10 @@ export function PadGrid({
 
   const categoryFunctions = useMemo(() => getRegistryByCategory(category), [category])
 
-  const orderedSlots = useMemo(() => {
-    const slotsInCategory = padSlots.filter((s) => s.category === category)
-    const baseSlots: PadSlot[] = []
-    const extraSlots: PadSlot[] = []
-
-    for (const fn of categoryFunctions) {
-      const fnSlots = slotsInCategory.filter((s) => s.functionId === fn.id && !s.isExtra)
-      baseSlots.push(...fnSlots)
-    }
-
-    for (const slot of slotsInCategory) {
-      if (slot.isExtra) extraSlots.push(slot)
-    }
-
-    return [...baseSlots, ...extraSlots]
-  }, [padSlots, category, categoryFunctions])
+  const orderedSlots = useMemo(
+    () => orderPadSlotsForCategory(padSlots, category),
+    [padSlots, category]
+  )
 
   const getSlotLabel = useCallback(
     (slot: PadSlot): string => {
@@ -98,7 +92,7 @@ export function PadGrid({
         gridTemplateRows: `repeat(${rowCount}, minmax(${MIN_ROW_PX}px, 1fr))`,
       }}
     >
-      {orderedSlots.map((slot) => {
+      {orderedSlots.map((slot, index) => {
         const fn = getFunctionDef(slot.functionId)
         if (!fn) return null
         return (
@@ -111,6 +105,7 @@ export function PadGrid({
               isBypassed={slot.isActive && !!slot.isBypassed}
               chainPosition={slot.isActive ? chainPositions.get(slot.instanceId) : undefined}
               slotLabel={getSlotLabel(slot)}
+              keyHint={keyLabelForIndex(index)}
               isExtra={slot.isExtra}
               onToggle={() => onToggleSlot(slot.instanceId)}
               onSelect={() => onSelectSlot(slot.instanceId)}
@@ -125,7 +120,13 @@ export function PadGrid({
       })}
 
       <div className="min-w-0 min-h-0">
-        <AddPad category={category} functions={categoryFunctions} onAdd={onAddSlot} />
+        <AddPad
+          category={category}
+          functions={categoryFunctions}
+          open={isAddPadOpen}
+          onOpenChange={onAddPadOpenChange}
+          onAdd={onAddSlot}
+        />
       </div>
 
       {Array.from({ length: placeholderCount }).map((_, i) => (

@@ -52,30 +52,40 @@ Footer cheatsheet en `page.tsx`: `1–5 tabs · click toggle · ctrl/alt+click s
 
 ---
 
-## Future Phase (planificado)
+## Disparo posicional (fase 2)
 
-### Disparo posicional de pads
-
-Modelo acordado: **posicional por defecto, override configurable por pad**.
+Modelo implementado: **posicional por defecto**, sin overrides ni persistencia.
 
 | Fila grilla | Teclas (tab activo) |
 |-------------|---------------------|
 | Fila 1 (cols 0–7) | Q W E R T Y U I |
 | Fila 2 (cols 0–7) | A S D F G H J K |
+| Fila 3 (cols 0–7) | Z X C V B N M , |
 
-- Índice de celda en `pad-grid.tsx` es el ancla del mapeo
-- Orden estable: registro → slots por functionId → AddPad → placeholders
+- `lib/pad-key-map.ts` define el mapa físico y las etiquetas visibles.
+- `lib/pad-grid-order.ts` es la única fuente del orden: registro → slots base → extras.
+- La celda AddPad y placeholders no reciben tecla.
+- Los pads muestran su tecla asignada; las filas posteriores a la tercera solo se controlan con mouse.
 
-### Selección vs toggle por teclado
+### Acciones de teclado
 
-- Click mouse: toggle + select (implementado)
-- Modificador: select only (implementado)
-- Teclado futuro: definir si Space/Enter togglean celda enfocada
+| Tecla | Acción |
+|-------|--------|
+| Q–I / A–K / Z–, | Tap: toggle + select; mantener ≥250ms: momentary hasta soltar |
+| Shift + tecla de pad | Armar/desarmar un pad inactivo para preview |
+| Alt + tecla de pad | Seleccionar sin toggle |
+| Space | Abrir AddPad de la categoría activa y enfocar su búsqueda |
+| 1–5 | Cambiar tab de categoría |
+| Shift+1–4 | Cambiar el output editado: o0–o3 |
+| Enter | Aplicar el pad armado |
+| Escape | Desarmar el pad |
+| Shift+Backspace/Delete | Eliminar el slot extra seleccionado |
 
-### Persistencia de bindings
+### Guardas
 
-- localStorage por slot o por celda (tab + index)
-- MIDI como capa encima del mismo mapa de celdas
+- Ignorar repeticiones automáticas de teclas.
+- No disparar atajos en inputs editables, elementos interactivos o overlays Radix abiertos.
+- Usar `event.code` para conservar las posiciones físicas entre layouts de teclado.
 
 ---
 

@@ -49,7 +49,7 @@ export default function LaunchpadPage() {
 
         <footer className="shrink-0 px-3 py-1.5 border-t border-white/5">
           <p className="font-mono text-[8px] text-white/15 text-center tracking-wider">
-            1–5 tabs · click toggle · hold = momentary · shift+click arm · ctrl/alt+click select · right-click select
+            Q–I / A–K / Z–, pads · space add · 1–5 tabs · shift+1–4 outputs · hold momentary · shift arm · alt select · enter apply · esc disarm · shift+backspace delete
           </p>
         </footer>
       </div>

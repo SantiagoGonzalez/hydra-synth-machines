@@ -21,6 +21,7 @@ interface PadProps {
   /** Posición en cadena (1-based), esquina opuesta al #N */
   chainPosition?: number
   slotLabel?: string
+  keyHint?: string
   isExtra?: boolean
   onToggle: () => void
   onSelect: () => void
@@ -39,6 +40,7 @@ export function Pad({
   isBypassed = false,
   chainPosition,
   slotLabel,
+  keyHint,
   isExtra,
   onToggle,
   onSelect,
@@ -211,6 +213,17 @@ export function Pad({
         >
           <X className="w-2 h-2" />
         </button>
+      )}
+
+      {keyHint && (
+        <span
+          className={cn(
+            "absolute top-1 left-1 font-mono text-[8px] leading-none px-1 py-0.5 rounded border border-white/15 text-white/35 bg-black/35",
+            isExtra && "left-5"
+          )}
+        >
+          {keyHint}
+        </span>
       )}
 
       <span

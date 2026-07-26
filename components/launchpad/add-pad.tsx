@@ -2,7 +2,7 @@
 
 // Pad "+" con command palette inline para agregar nuevas instancias a una sección
 
-import { useState, useCallback } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { Plus } from "lucide-react"
 import { motion } from "framer-motion"
 import { CATEGORY_COLORS, type HydraCategory, type HydraFunctionDef } from "@/lib/hydra-registry"
@@ -20,23 +20,31 @@ import { cn } from "@/lib/utils"
 interface AddPadProps {
   category: HydraCategory
   functions: HydraFunctionDef[]
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onAdd: (functionId: string) => void
 }
 
-export function AddPad({ category, functions, onAdd }: AddPadProps) {
-  const [open, setOpen] = useState(false)
+export function AddPad({ category, functions, open, onOpenChange, onAdd }: AddPadProps) {
   const color = CATEGORY_COLORS[category]
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const frame = window.requestAnimationFrame(() => searchInputRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [open])
 
   const handleSelect = useCallback(
     (functionId: string) => {
       onAdd(functionId)
-      setOpen(false)
+      onOpenChange(false)
     },
-    [onAdd]
+    [onAdd, onOpenChange]
   )
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <motion.div
           className={cn(
@@ -68,6 +76,7 @@ export function AddPad({ category, functions, onAdd }: AddPadProps) {
       >
         <Command className="bg-transparent">
           <CommandInput
+            ref={searchInputRef}
             placeholder="Search..."
             className="font-mono text-[11px] text-white/70 border-b border-white/10 h-8"
           />
