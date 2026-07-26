@@ -60,7 +60,9 @@ Modelo implementado: **posicional por defecto**, sin overrides ni persistencia.
 |-------------|---------------------|
 | Fila 1 (cols 0–7) | Q W E R T Y U I |
 | Fila 2 (cols 0–7) | A S D F G H J K |
-| Fila 3 | Acciones de params: Z, X, B |
+| Fila 3 | Acciones de params: X source, B bypass, C random |
+
+- `Z` tap corto alterna escalar ↔ fn; mantener `Z` + `←/→` recorre shapes fn.
 
 - `lib/pad-key-map.ts` define el mapa físico y las etiquetas visibles.
 - `lib/pad-grid-order.ts` es la única fuente del orden: registro → slots base → extras.
@@ -79,12 +81,17 @@ Modelo implementado: **posicional por defecto**, sin overrides ni persistencia.
 | Space | Abrir AddPad de la categoría activa y enfocar su búsqueda |
 | 1–5 | Cambiar tab de categoría |
 | Shift+1–4 | Cambiar el output editado: o0–o3 |
+| Shift+5 | Toggle vista grid 2x2 |
+| Alt+1–9 | Saltar al pad N de la cadena (foco chain) |
+| Alt+← / → | Con foco chain: recorrer pads de la cadena |
 | P / O | Mostrar el foco de params / volver al foco de pads |
 | ↑ / ↓ | Recorrer los controles del panel de params |
 | ← / → | Ajustar 1% del rango; Shift ajusta 10% |
 | Ctrl+← / → | Recorrer pads activos de la cadena |
-| Z / X / B | Alternar scalar/fn, enfocar source, bypass del pad |
-| Enter | Aplicar el draft de source enfocado o el pad armado |
+| Z tap | Alternar escalar/fn del parámetro enfocado |
+| Z + ← / → | Recorrer sin/cos/tan/linear (param en modo fn) |
+| X / B / C | Enfocar source / bypass / random patch |
+| Enter | Aplicar draft de source o pad armado |
 | Escape | Desarmar el pad |
 | Shift+Backspace/Delete | Eliminar el slot extra seleccionado |
 
@@ -128,6 +135,6 @@ Modelo implementado: **posicional por defecto**, sin overrides ni persistencia.
 
 ## Composition Notes
 
-- **Store**: `selectedSlotId`, `focusZone`, `focusedControlId`, `selectControlList`
+- **Store**: `selectedSlotId`, `focusZone` (`pads` | `params` | `chain`), `focusedControlId`, `selectControlList`
 - **Grid**: `pad-band-and-grid.skill.md` — orden de celdas
 - **Layout**: footer cheatsheet en `launchpad-layout.skill.md`

@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useMemo } from "react"
 import { Trash2, Shuffle } from "lucide-react"
-import { HYDRA_REGISTRY, CATEGORIES, type HydraCategory } from "@/lib/hydra-registry"
+import { CATEGORIES, type HydraCategory } from "@/lib/hydra-registry"
 import { useChainStore } from "@/stores/chain-store"
 import { orderPadSlotsForCategory } from "@/lib/pad-grid-order"
 import { PadTabBar } from "@/components/launchpad/pad-tab-bar"
@@ -24,18 +24,24 @@ export function PadBand() {
   const disarmSlot = useChainStore((s) => s.disarmSlot)
   const applyArmedSlot = useChainStore((s) => s.applyArmedSlot)
   const setEditingOutput = useChainStore((s) => s.setEditingOutput)
+  const gridView = useChainStore((s) => s.gridView)
+  const setGridView = useChainStore((s) => s.setGridView)
   const armedSlotId = useChainStore((s) => s.armedSlotId)
   const selectedSlotId = useChainStore((s) => s.selectedSlotId)
+  const focusZone = useChainStore((s) => s.focusZone)
   const focusedControlId = useChainStore((s) => s.focusedControlId)
   const sourceDraftId = useChainStore((s) => s.sourceDraftId)
   const setFocusZone = useChainStore((s) => s.setFocusZone)
   const moveFocusedControl = useChainStore((s) => s.moveFocusedControl)
   const nudgeFocusedControl = useChainStore((s) => s.nudgeFocusedControl)
   const cycleChainPad = useChainStore((s) => s.cycleChainPad)
+  const selectChainPosition = useChainStore((s) => s.selectChainPosition)
   const toggleFocusedParamMode = useChainStore((s) => s.toggleFocusedParamMode)
+  const cycleFocusedFnShape = useChainStore((s) => s.cycleFocusedFnShape)
   const focusSourceControl = useChainStore((s) => s.focusSourceControl)
   const toggleDetailBypass = useChainStore((s) => s.toggleDetailBypass)
   const applySourceDraft = useChainStore((s) => s.applySourceDraft)
+  const randomizePatch = useChainStore((s) => s.randomizePatch)
 
   const [activeCategory, setActiveCategory] = useState<HydraCategory>("source")
   const [isAddPadOpen, setIsAddPadOpen] = useState(false)
@@ -93,10 +99,16 @@ export function PadBand() {
     [setFocusZone]
   )
 
+  const handleToggleGridView = useCallback(() => {
+    setGridView(!gridView)
+  }, [gridView, setGridView])
+
   useLaunchpadKeys({
     orderedSlots,
+    focusZone,
     onTabChange: handleCategoryChange,
     onOutputChange: setEditingOutput,
+    onToggleGridView: handleToggleGridView,
     onOpenAddPad: () => setIsAddPadOpen(true),
     onToggleSlot: handleToggleSlot,
     onSelectSlot: handleSelectSlot,
@@ -114,37 +126,23 @@ export function PadBand() {
     onMoveFocusedControl: moveFocusedControl,
     onNudgeFocusedControl: nudgeFocusedControl,
     onCycleChainPad: cycleChainPad,
+    onSelectChainPosition: selectChainPosition,
     onToggleFocusedParamMode: toggleFocusedParamMode,
+    onCycleFocusedFnShape: cycleFocusedFnShape,
     onFocusSourceControl: focusSourceControl,
     onToggleDetailBypass: toggleDetailBypass,
+    onRandomize: randomizePatch,
   })
-
-  const handleRandomize = useCallback(() => {
-    clearAll()
-    const sources = HYDRA_REGISTRY.filter((f) => f.category === "source")
-    const transforms = HYDRA_REGISTRY.filter((f) => f.category !== "source")
-    const randSrc = sources[Math.floor(Math.random() * sources.length)]
-    const randT1 = transforms[Math.floor(Math.random() * transforms.length)]
-    const randT2 = transforms.filter((f) => f.id !== randT1.id)[
-      Math.floor(Math.random() * (transforms.length - 1))
-    ]
-    const srcSlot = padSlots.find((s) => s.functionId === randSrc.id && !s.isExtra)
-    const t1Slot = padSlots.find((s) => s.functionId === randT1.id && !s.isExtra)
-    const t2Slot = padSlots.find((s) => s.functionId === randT2.id && !s.isExtra)
-    if (srcSlot) toggleSlot(srcSlot.instanceId)
-    if (t1Slot) setTimeout(() => toggleSlot(t1Slot.instanceId), 10)
-    if (t2Slot) setTimeout(() => toggleSlot(t2Slot.instanceId), 20)
-  }, [clearAll, padSlots, toggleSlot])
 
   return (
     <section className="min-h-0 flex flex-col border-t border-white/5 bg-black/40">
       <div className="shrink-0 flex items-center justify-between gap-3 px-3 py-2 border-b border-white/5">
-          <PadTabBar activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
+        <PadTabBar activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         <div className="flex gap-1 shrink-0">
           <button
             type="button"
-            onClick={handleRandomize}
-            title="Random patch"
+            onClick={randomizePatch}
+            title="Random patch (C)"
             className="p-1.5 rounded border border-white/10 text-white/30 hover:border-white/30 hover:text-white/60 transition-colors"
           >
             <Shuffle className="w-3 h-3" />

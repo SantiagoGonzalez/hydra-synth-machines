@@ -5,13 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import { type HydraParam } from "@/lib/hydra-registry"
-import {
-  isParamFn,
-  scalarPreview,
-  DEFAULT_FN_VALUE,
-  type ParamValue,
-  type FnShape,
-} from "@/lib/param-value"
+import { FN_SHAPES, isParamFn, scalarPreview, DEFAULT_FN_VALUE, type ParamValue } from "@/lib/param-value"
 import { FN_FIELD_RANGES } from "@/lib/launchpad-controls"
 import { cn } from "@/lib/utils"
 
@@ -25,8 +19,6 @@ interface ParamSliderProps {
   focusedControlId: string | null
   onChange: (value: ParamValue) => void
 }
-
-const FN_SHAPES: FnShape[] = ["sin", "cos", "tan", "linear"]
 
 export function SingleParamSlider({
   param,

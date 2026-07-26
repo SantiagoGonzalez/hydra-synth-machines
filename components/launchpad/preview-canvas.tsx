@@ -58,13 +58,13 @@ function ArmedPreview() {
       <canvas ref={canvasRef} className="block w-full aspect-video bg-black" />
       <div className="flex items-center justify-between px-2 py-1 bg-black/80 border-t border-yellow-400/20">
         <span className="font-mono text-[8px] text-yellow-400/80 uppercase tracking-wider">
-          preview
+          preview · Enter
         </span>
         <button
           type="button"
           onClick={applyArmedSlot}
           className="flex items-center gap-1 font-mono text-[8px] uppercase px-1.5 py-0.5 rounded bg-yellow-400/15 text-yellow-300 hover:bg-yellow-400/30 transition-colors"
-          title="Apply armed pad to chain"
+          title="Apply armed pad (Enter)"
         >
           <Check className="w-2.5 h-2.5" />
           Apply

@@ -2,6 +2,8 @@
 
 export type FnShape = "sin" | "cos" | "tan" | "linear"
 
+export const FN_SHAPES: FnShape[] = ["sin", "cos", "tan", "linear"]
+
 export interface ParamFnValue {
   kind: "fn"
   shape: FnShape

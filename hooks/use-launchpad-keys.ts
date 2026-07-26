@@ -1,10 +1,10 @@
 "use client"
 
-// Atajos del launchpad: tabs, outputs y disparo posicional de pads.
+// Atajos del launchpad: tabs, outputs, cadena, params y disparo posicional de pads.
 
 import { useEffect, useRef } from "react"
 import { CATEGORIES, type HydraCategory } from "@/lib/hydra-registry"
-import { cellIndexForCode, PARAM_ACTION_KEY_MAP } from "@/lib/pad-key-map"
+import { cellIndexForCode, chainPositionForCode, PARAM_ACTION_KEY_MAP } from "@/lib/pad-key-map"
 import type { PadSlot } from "@/stores/chain-store"
 import type { OutputBuffer } from "@/lib/chain-compiler"
 
@@ -33,8 +33,10 @@ interface PendingPress {
 
 interface LaunchpadKeyOptions {
   orderedSlots: PadSlot[]
+  focusZone: "pads" | "params" | "chain"
   onTabChange: (category: HydraCategory) => void
   onOutputChange: (output: OutputBuffer) => void
+  onToggleGridView: () => void
   onOpenAddPad: () => void
   onToggleSlot: (slotId: string) => void
   onSelectSlot: (slotId: string) => void
@@ -52,9 +54,12 @@ interface LaunchpadKeyOptions {
   onMoveFocusedControl: (delta: number) => void
   onNudgeFocusedControl: (fraction: number) => void
   onCycleChainPad: (delta: number) => void
+  onSelectChainPosition: (index: number) => void
   onToggleFocusedParamMode: () => void
+  onCycleFocusedFnShape: (delta: number) => void
   onFocusSourceControl: () => void
   onToggleDetailBypass: () => void
+  onRandomize: () => void
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -78,8 +83,10 @@ function hasOpenOverlay(): boolean {
 
 export function useLaunchpadKeys({
   orderedSlots,
+  focusZone,
   onTabChange,
   onOutputChange,
+  onToggleGridView,
   onOpenAddPad,
   onToggleSlot,
   onSelectSlot,
@@ -97,15 +104,22 @@ export function useLaunchpadKeys({
   onMoveFocusedControl,
   onNudgeFocusedControl,
   onCycleChainPad,
+  onSelectChainPosition,
   onToggleFocusedParamMode,
+  onCycleFocusedFnShape,
   onFocusSourceControl,
   onToggleDetailBypass,
+  onRandomize,
 }: LaunchpadKeyOptions) {
   const pendingPressesRef = useRef(new Map<string, PendingPress>())
+  const zHeldRef = useRef(false)
+  const zUsedArrowRef = useRef(false)
   const optionsRef = useRef<LaunchpadKeyOptions>({
     orderedSlots,
+    focusZone,
     onTabChange,
     onOutputChange,
+    onToggleGridView,
     onOpenAddPad,
     onToggleSlot,
     onSelectSlot,
@@ -123,14 +137,19 @@ export function useLaunchpadKeys({
     onMoveFocusedControl,
     onNudgeFocusedControl,
     onCycleChainPad,
+    onSelectChainPosition,
     onToggleFocusedParamMode,
+    onCycleFocusedFnShape,
     onFocusSourceControl,
     onToggleDetailBypass,
+    onRandomize,
   })
   optionsRef.current = {
     orderedSlots,
+    focusZone,
     onTabChange,
     onOutputChange,
+    onToggleGridView,
     onOpenAddPad,
     onToggleSlot,
     onSelectSlot,
@@ -148,9 +167,12 @@ export function useLaunchpadKeys({
     onMoveFocusedControl,
     onNudgeFocusedControl,
     onCycleChainPad,
+    onSelectChainPosition,
     onToggleFocusedParamMode,
+    onCycleFocusedFnShape,
     onFocusSourceControl,
     onToggleDetailBypass,
+    onRandomize,
   }
 
   useEffect(() => {
@@ -173,11 +195,35 @@ export function useLaunchpadKeys({
       if (hasOpenOverlay()) return
       const isButton = isButtonTarget(event.target)
 
+      if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+        const chainPosition = chainPositionForCode(event.code)
+        if (chainPosition !== undefined) {
+          event.preventDefault()
+          optionsRef.current.onSelectChainPosition(chainPosition)
+          return
+        }
+
+        if (
+          optionsRef.current.focusZone === "chain" &&
+          (event.code === "ArrowLeft" || event.code === "ArrowRight")
+        ) {
+          event.preventDefault()
+          optionsRef.current.onCycleChainPad(event.code === "ArrowLeft" ? -1 : 1)
+          return
+        }
+      }
+
       if (event.shiftKey) {
         const output = OUTPUT_KEY_MAP[event.code]
         if (output && !event.ctrlKey && !event.metaKey && !event.altKey) {
           event.preventDefault()
           optionsRef.current.onOutputChange(output)
+          return
+        }
+
+        if (event.code === "Digit5" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          event.preventDefault()
+          optionsRef.current.onToggleGridView()
           return
         }
 
@@ -189,6 +235,13 @@ export function useLaunchpadKeys({
       }
 
       if (!event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (event.code === "KeyZ") {
+          zHeldRef.current = true
+          zUsedArrowRef.current = false
+          event.preventDefault()
+          return
+        }
+
         const tabIndex = TAB_KEY_MAP[event.code]
         if (tabIndex !== undefined) {
           const category = CATEGORIES[tabIndex]
@@ -236,11 +289,6 @@ export function useLaunchpadKeys({
         }
 
         const action = PARAM_ACTION_KEY_MAP[event.code as keyof typeof PARAM_ACTION_KEY_MAP]
-        if (action === "toggle-fn") {
-          event.preventDefault()
-          optionsRef.current.onToggleFocusedParamMode()
-          return
-        }
         if (action === "focus-source") {
           event.preventDefault()
           optionsRef.current.onFocusSourceControl()
@@ -249,6 +297,11 @@ export function useLaunchpadKeys({
         if (action === "toggle-bypass") {
           event.preventDefault()
           optionsRef.current.onToggleDetailBypass()
+          return
+        }
+        if (action === "random") {
+          event.preventDefault()
+          optionsRef.current.onRandomize()
           return
         }
       }
@@ -262,8 +315,14 @@ export function useLaunchpadKeys({
 
       if (event.code === "ArrowLeft" || event.code === "ArrowRight") {
         if (event.metaKey || event.altKey) return
-        event.preventDefault()
         const direction = event.code === "ArrowLeft" ? -1 : 1
+        if (zHeldRef.current) {
+          event.preventDefault()
+          zUsedArrowRef.current = true
+          optionsRef.current.onCycleFocusedFnShape(direction)
+          return
+        }
+        event.preventDefault()
         if (event.ctrlKey) {
           optionsRef.current.onCycleChainPad(direction)
         } else {
@@ -306,10 +365,20 @@ export function useLaunchpadKeys({
     }
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code === "KeyZ" && zHeldRef.current) {
+        if (!zUsedArrowRef.current) {
+          optionsRef.current.onToggleFocusedParamMode()
+        }
+        zHeldRef.current = false
+        zUsedArrowRef.current = false
+        return
+      }
       releasePress(event.code)
     }
 
     const handleWindowBlur = () => {
+      zHeldRef.current = false
+      zUsedArrowRef.current = false
       pendingPressesRef.current.forEach((pending) => {
         window.clearTimeout(pending.timerId)
         if (pending.isMomentary) optionsRef.current.onMomentaryEnd(pending.slotId)

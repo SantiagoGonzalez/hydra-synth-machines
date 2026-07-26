@@ -8,7 +8,7 @@ import {
   type OutputBuffer,
   OUTPUT_BUFFERS,
 } from "@/lib/chain-compiler"
-import { normalizeParamValue, type ParamValue } from "@/lib/param-value"
+import { FN_SHAPES, isParamFn, normalizeParamValue, type ParamValue } from "@/lib/param-value"
 import { getDefaultGlobalFaders, type GlobalFaderId, type GlobalFaderValues } from "@/lib/global-faders"
 import {
   buildControlList,
@@ -153,7 +153,7 @@ interface ChainState {
   armedSlotId: string | null
   selectedSlotId: string | null
   momentarySlotId: string | null
-  focusZone: "pads" | "params"
+  focusZone: "pads" | "params" | "chain"
   focusedControlId: string | null
   sourceDraftId: string | null
   globalFaders: GlobalFaderValues
@@ -177,7 +177,10 @@ interface ChainState {
   applyArmedSlot: () => void
   markSafeCode: () => void
   restoreFromFavorite: (input: Partial<Record<OutputBuffer, ActivePad[]>> | ActivePad[]) => void
-  setFocusZone: (zone: "pads" | "params") => void
+  setFocusZone: (zone: "pads" | "params" | "chain") => void
+  selectChainPosition: (index: number) => void
+  randomizePatch: () => void
+  cycleFocusedFnShape: (delta: number) => void
   setFocusedControl: (controlId: string | null) => void
   moveFocusedControl: (delta: number) => void
   nudgeFocusedControl: (fraction: number) => void
@@ -214,9 +217,24 @@ export const useChainStore = create<ChainState>((set, get) => ({
 
   setFocusZone: (focusZone) => {
     set((state) => {
-      if (focusZone === "pads") return { focusZone, focusedControlId: null }
+      if (focusZone === "pads" || focusZone === "chain") {
+        return { focusZone, focusedControlId: null }
+      }
       const controls = selectControlList(state)
       return { focusZone, focusedControlId: state.focusedControlId ?? controls[0]?.id ?? null }
+    })
+  },
+
+  selectChainPosition: (index) => {
+    const state = get()
+    const pads = [...state.activePads].sort((a, b) => a.activatedAt - b.activatedAt)
+    const pad = pads[index - 1]
+    if (!pad) return
+    set({
+      selectedSlotId: pad.instanceId,
+      focusedControlId: null,
+      sourceDraftId: null,
+      focusZone: "chain",
     })
   },
 
@@ -358,7 +376,63 @@ export const useChainStore = create<ChainState>((set, get) => ({
     const currentIndex = pads.findIndex((pad) => pad.instanceId === selectDetailPad(state)?.instanceId)
     const startIndex = currentIndex === -1 ? 0 : currentIndex
     const nextIndex = (startIndex + delta + pads.length) % pads.length
-    set({ selectedSlotId: pads[nextIndex].instanceId, focusedControlId: null, sourceDraftId: null })
+    set({
+      selectedSlotId: pads[nextIndex].instanceId,
+      focusedControlId: null,
+      sourceDraftId: null,
+      focusZone: "chain",
+    })
+  },
+
+  cycleFocusedFnShape: (delta) => {
+    const state = get()
+    const controls = selectControlList(state)
+    const focused = controls.find((candidate) => candidate.id === state.focusedControlId) ?? controls[0]
+    if (!focused) return
+    const address =
+      focused.address.kind === "param"
+        ? focused.address
+        : focused.address.kind === "fn"
+          ? {
+              kind: "param" as const,
+              padId: focused.address.padId,
+              scope: focused.address.scope,
+              paramName: focused.address.paramName,
+            }
+          : null
+    if (!address) return
+    const pad = selectDetailPad(state)
+    if (!pad || pad.instanceId !== address.padId) return
+    const params = address.scope === "main" ? pad.params : pad.secondaryParams
+    const current = params?.[address.paramName]
+    if (!current || !isParamFn(current)) return
+    const shapeIndex = FN_SHAPES.indexOf(current.shape)
+    const baseIndex = shapeIndex === -1 ? 0 : shapeIndex
+    const nextShape = FN_SHAPES[(baseIndex + delta + FN_SHAPES.length) % FN_SHAPES.length]
+    const next = { ...current, shape: nextShape }
+    if (address.scope === "main") {
+      get().updateParam(address.padId, address.paramName, next)
+    } else {
+      get().updateSecondaryParam(address.padId, address.paramName, next)
+    }
+  },
+
+  randomizePatch: () => {
+    const { padSlots } = get()
+    get().clearAll()
+    const sources = HYDRA_REGISTRY.filter((fn) => fn.category === "source")
+    const transforms = HYDRA_REGISTRY.filter((fn) => fn.category !== "source")
+    const randSrc = sources[Math.floor(Math.random() * sources.length)]
+    const randT1 = transforms[Math.floor(Math.random() * transforms.length)]
+    const randT2 = transforms.filter((fn) => fn.id !== randT1.id)[
+      Math.floor(Math.random() * (transforms.length - 1))
+    ]
+    const srcSlot = padSlots.find((slot) => slot.functionId === randSrc.id && !slot.isExtra)
+    const t1Slot = padSlots.find((slot) => slot.functionId === randT1.id && !slot.isExtra)
+    const t2Slot = padSlots.find((slot) => slot.functionId === randT2.id && !slot.isExtra)
+    if (srcSlot) get().toggleSlot(srcSlot.instanceId)
+    if (t1Slot) setTimeout(() => get().toggleSlot(t1Slot.instanceId), 10)
+    if (t2Slot) setTimeout(() => get().toggleSlot(t2Slot.instanceId), 20)
   },
 
   setSourceDraft: (sourceDraftId) => set({ sourceDraftId }),

@@ -13,6 +13,7 @@ export function ParamPanel() {
   const selectSlot = useChainStore((s) => s.selectSlot)
   const applyArmedSlot = useChainStore((s) => s.applyArmedSlot)
   const detailPad = useChainStore(selectDetailPad)
+  const focusZone = useChainStore((s) => s.focusZone)
   const isArmed = detailPad != null && armedSlotId === detailPad.instanceId
 
   return (
@@ -27,11 +28,12 @@ export function ParamPanel() {
       {activePads.length > 0 && (
         <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
           <p className="font-mono text-[9px] text-white/20 uppercase tracking-wider">
-            Chain ({activePads.length})
+            Chain ({activePads.length}) · Alt+1–9
           </p>
           <ChainChips
             pads={activePads}
             highlightId={detailPad?.instanceId}
+            isChainFocused={focusZone === "chain"}
             onChipClick={selectSlot}
           />
         </div>
@@ -42,12 +44,13 @@ export function ParamPanel() {
           {isArmed && (
             <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded border border-yellow-400/30 bg-yellow-400/10">
               <span className="font-mono text-[9px] text-yellow-400/90 uppercase tracking-wider">
-                Armed
+                Armed · Enter
               </span>
               <button
                 type="button"
                 onClick={applyArmedSlot}
                 className="font-mono text-[9px] px-2 py-0.5 rounded bg-yellow-400/20 text-yellow-300 hover:bg-yellow-400/30 transition-colors uppercase tracking-wider"
+                title="Apply armed pad (Enter)"
               >
                 Apply
               </button>

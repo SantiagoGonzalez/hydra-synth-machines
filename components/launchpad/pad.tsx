@@ -229,7 +229,7 @@ export function Pad({
 
       {keyHint && (
         <span
-          className="absolute top-1 left-1 font-mono text-[14px] font-bold leading-none px-1.5 py-1 rounded border border-white/25 text-white/80 bg-black/45"
+          className="absolute top-0.5 left-0.5 font-mono text-[28px] font-bold leading-none px-1 py-0.5 rounded border border-white/30 text-white/90 bg-black/50"
         >
           {keyHint}
         </span>

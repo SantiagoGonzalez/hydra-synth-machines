@@ -10,6 +10,8 @@ interface ChainChipsProps {
   pads: ActivePad[]
   /** instanceId del pad a resaltar (detalle / edición) */
   highlightId?: string | null
+  /** Resalta la sección cuando el foco de teclado está en la cadena */
+  isChainFocused?: boolean
   onChipClick?: (instanceId: string) => void
   showOut?: boolean
   className?: string
@@ -18,6 +20,7 @@ interface ChainChipsProps {
 export function ChainChips({
   pads,
   highlightId,
+  isChainFocused = false,
   onChipClick,
   showOut = true,
   className,
@@ -27,7 +30,13 @@ export function ChainChips({
   if (ordered.length === 0) return null
 
   return (
-    <div className={cn("flex items-center gap-1 flex-wrap", className)}>
+    <div
+      className={cn(
+        "flex items-center gap-1 flex-wrap rounded transition-shadow",
+        isChainFocused && "ring-1 ring-inset ring-yellow-300/60 p-1",
+        className
+      )}
+    >
       {ordered.map((pad, idx) => {
         const color = CATEGORY_COLORS[pad.category]
         const def = getFunctionDef(pad.functionId)

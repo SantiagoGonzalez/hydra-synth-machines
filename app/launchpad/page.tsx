@@ -58,7 +58,7 @@ export default function LaunchpadPage() {
 
         <footer className="shrink-0 px-3 py-1.5 border-t border-white/5">
           <p className="font-mono text-[8px] text-white/15 text-center tracking-wider">
-            Q–I / A–K pads · Z fn · X source · B bypass · P params · O pads · arrows adjust · space add · 1–5 tabs · shift+1–4 outputs
+            Q–I / A–K pads · Z fn · hold Z+←→ shapes · X source · B bypass · C random · P params · O pads · Alt+1–9 chain · Enter apply · shift+5 grid · 1–5 tabs · shift+1–4 outputs
           </p>
         </footer>
       </div>
