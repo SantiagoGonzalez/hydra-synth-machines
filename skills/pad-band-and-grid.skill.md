@@ -14,7 +14,7 @@ Guía para la banda inferior de pads del launchpad: tabs por categoría, grilla 
 
 ## Preconditions
 - `CATEGORIES` y `getRegistryByCategory()` en `lib/hydra-registry.ts`
-- `chain-store` con `padSlots`, `toggleSlot`, `addSlot`, `removeSlot`, `setSlotMode`, `selectSlot`
+- `chain-store` con `padSlots`, `toggleSlot`, `addSlot`, `removeSlot`, `holdSlot`, `releaseSlot`, `selectSlot`
 - `AddPad` y `Pad` en `components/launchpad/`
 
 ---
@@ -56,7 +56,7 @@ PadBand (section, flex-col, min-h-0)
 **Sizing** (no cuadrado):
 ```tsx
 const GRID_COLS = 8
-const MIN_ROW_PX = 56
+const MIN_ROW_PX = 64
 const rowCount = Math.ceil(totalCells / GRID_COLS)
 
 <div
@@ -67,25 +67,27 @@ const rowCount = Math.ceil(totalCells / GRID_COLS)
 
 - Celdas: `min-w-0 min-h-0` (sin `aspect-square`)
 - Pads apaisados: ancho = 1/8 banda; alto = fracción del alto de la banda
-- Overflow: scroll vertical en la banda cuando filas × 56px > alto disponible
+- Overflow: scroll vertical en la banda cuando filas × 64px > alto disponible
 
 ### Pad Interactions (`pad.tsx`)
 
 | Gesto | Efecto |
 |-------|--------|
-| Click (toggle mode) | `toggleSlot` + `selectSlot` |
+| Tap corto (< 250ms) | `toggleSlot` + `selectSlot` |
+| Long-press (≥ `MOMENTARY_HOLD_MS` = 250ms) | `holdSlot` — activa ESE slot como momentary al final de la cadena |
+| Pointer up / leave (tras long-press) | `releaseSlot` — desactiva el slot momentary |
 | Ctrl/Alt+click | solo `selectSlot` |
-| Shift+click (inactivo) | `armSlot` — staging preview en canvas |
+| Shift+click (inactivo) | `armSlot` — staging preview en mini-canvas PiP |
 | Shift+click (armado) | `disarmSlot` |
-| Right-click | solo `selectSlot` (`preventDefault`) |
-| Pointer down (momentary) | `onMomentaryStart` + select |
-| Pointer up (momentary) | `onMomentaryEnd` |
+| Right-click | solo `selectSlot` (`preventDefault`); botón secundario no togglea |
 
-**Visual:**
-- Activo: borde color categoría + glow **inset** (`boxShadow` animado)
+**Visual (jerarquía tipográfica):**
+- Label de función dominante: `text-[12px]` semibold; categoría secundaria `text-[9px]`
+- Activo: borde color categoría + glow **inset** (`boxShadow` animado) + dot `w-2 h-2` superior derecha
 - Seleccionado: `ring-2 ring-inset ring-white/60`
 - Armado: borde punteado amarillo + pulso inset
-- `chainPosition`: badge numérico en esquina inferior derecha (solo activos); opuesto al `#N` en inferior izquierda
+- Bypasseado (`isBypassed`, prop desde `pad-grid`): borde/fondo atenuados, sin glow, label tachado, badge "byp" ámbar inferior izquierda
+- `chainPosition`: badge destacado `text-[10px]` con fondo tintado por categoría, inferior derecha (solo activos)
 - `overflow-hidden` en el pad para contener animaciones
 
 ### Slot Labels
@@ -102,14 +104,15 @@ return slotsForFn.length > 1 ? `#${index + 1}` : ""
 
 | Action | Uso en banda |
 |--------|----------------|
-| `toggleSlot(slotId)` | click normal en pad toggle |
+| `toggleSlot(slotId)` | tap corto en pad |
 | `selectSlot(slotId)` | foco para ParamPanel |
-| `setSlotMode(slotId, mode)` | botón T/M en pad |
+| `holdSlot(slotId)` | long-press: activa el slot presionado como momentary |
+| `releaseSlot(slotId)` | pointer up/leave: apaga el slot si `momentarySlotId === slotId` |
 | `addSlot(functionId)` | AddPad picker |
 | `removeSlot(slotId)` | X en slots `isExtra` |
 | `clearAll()` | toolbar Clear |
 
-`padModes` local **eliminado** — `mode` vive en `PadSlot.mode` del store.
+**Modo T/M eliminado** — `PadSlot.mode` y `setSlotMode` ya no existen; momentary es un gesto (long-press) con estado transitorio `momentarySlotId` en el store.
 
 ---
 
@@ -138,7 +141,7 @@ return slotsForFn.length > 1 ? `#${index + 1}` : ""
 - **Orden estable** — siempre orden del registro, no alfabético ni por uso
 - **Placeholders** — celdas vacías dashed; mantienen grilla visual de 16 mínimo
 - **Un tab visible** — `PadGrid` montado solo para `activeCategory` (performance)
-- **Momentary legacy** — `activatePad(functionId, "momentary")` crea slot extra (comportamiento heredado)
+- **Momentary sin slots extra** — `holdSlot`/`releaseSlot` operan sobre el slot presionado; el legacy `activatePad`/`deactivatePad` (creaba slots huérfanos) fue eliminado
 
 ---
 

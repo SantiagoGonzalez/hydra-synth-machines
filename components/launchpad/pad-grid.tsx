@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 
 const GRID_COLS = 8
 const GRID_MIN_CELLS = 16
-const MIN_ROW_PX = 56
+const MIN_ROW_PX = 64
 
 interface PadGridProps {
   category: HydraCategory
@@ -25,7 +25,6 @@ interface PadGridProps {
   onDisarmSlot: () => void
   onRemoveSlot: (slotId: string) => void
   onAddSlot: (functionId: string) => void
-  onModeChange: (slotId: string, mode: "toggle" | "momentary") => void
   onMomentaryStart: (slotId: string) => void
   onMomentaryEnd: (slotId: string) => void
 }
@@ -38,7 +37,6 @@ export function PadGrid({
   onDisarmSlot,
   onRemoveSlot,
   onAddSlot,
-  onModeChange,
   onMomentaryStart,
   onMomentaryEnd,
 }: PadGridProps) {
@@ -110,8 +108,8 @@ export function PadGrid({
               isActive={slot.isActive}
               isSelected={selectedSlotId === slot.instanceId}
               isArmed={armedSlotId === slot.instanceId}
+              isBypassed={slot.isActive && !!slot.isBypassed}
               chainPosition={slot.isActive ? chainPositions.get(slot.instanceId) : undefined}
-              mode={slot.mode}
               slotLabel={getSlotLabel(slot)}
               isExtra={slot.isExtra}
               onToggle={() => onToggleSlot(slot.instanceId)}
@@ -120,7 +118,6 @@ export function PadGrid({
               onDisarm={onDisarmSlot}
               onMomentaryStart={() => onMomentaryStart(slot.instanceId)}
               onMomentaryEnd={() => onMomentaryEnd(slot.instanceId)}
-              onModeChange={(m) => onModeChange(slot.instanceId, m)}
               onRemove={() => onRemoveSlot(slot.instanceId)}
             />
           </div>

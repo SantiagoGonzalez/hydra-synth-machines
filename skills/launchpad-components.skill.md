@@ -37,18 +37,20 @@ Grid principal: `grid-rows-[2fr_1fr]` (superior / banda de pads). Zona superior:
 ```
 app/launchpad/page.tsx
 ├── components/launchpad/
-│   ├── stage-column.tsx        ← HydraCanvas + ChainPreview compact
+│   ├── stage-column.tsx        ← HydraCanvas + PreviewCanvas (PiP) + ChainPreview compact
 │   ├── param-panel.tsx         ← ChainChips + PadParamPanel (armed) + GlobalFaders
 │   ├── chain-chips.tsx         ← chips ordenados compartidos (ChainPreview + ParamPanel)
-│   ├── pad-band.tsx            ← tab state, momentary handlers, shuffle/clear
+│   ├── pad-band.tsx            ← tab state, shuffle/clear, wiring hold/release
 │   ├── pad-tab-bar.tsx         ← 5 tabs con contador de activos (role=tablist)
 │   ├── pad-grid.tsx            ← grilla 8×2 por categoría, placeholders, AddPad
 │   ├── add-pad.tsx             ← "+" con Popover + Command palette
-│   ├── pad.tsx                 ← pad atómico: toggle/momentary, selección, glow inset
-│   ├── param-slider.tsx        ← sliders horizontales + valor editable + PadParamPanel
+│   ├── pad.tsx                 ← pad atómico: tap toggle / long-press momentary, selección, glow inset
+│   ├── param-slider.tsx        ← sliders horizontales + valor editable + PadParamPanel (header con bypass)
+│   ├── source-selector.tsx     ← fuente secundaria: grilla agrupada, draft local + Apply/Cancel
 │   ├── global-faders.tsx       ← SPEED/BRIGHT/DECAY/AMOUNT (local state, sin cablear)
 │   ├── chain-preview.tsx       ← código compilado tokenizado + copy + ChainChips; prop compact
-│   ├── hydra-canvas.tsx        ← WebGL, output tabs o0–o3, grid toggle, preview staging
+│   ├── hydra-canvas.tsx        ← WebGL principal: SOLO compiledCode, output tabs o0–o3, grid toggle
+│   ├── preview-canvas.tsx      ← mini-canvas PiP: instancia Hydra propia, evalúa previewCode al armar
 │   ├── favorites-dialog.tsx    ← biblioteca de favoritos en modal (header)
 │   └── hydra-thumbnail.tsx     ← thumbnail estático para favoritos
 hooks/
@@ -70,24 +72,31 @@ hooks/
     → HydraCanvas.run(compiledCode)
     → ChainPreview tokeniza compiledCode
     → ParamPanel muestra selectDetailPad (seleccionado o activo más reciente)
+
+[Shift+click arma un pad] → armedSlotId + previewCode = compile(activePads + armed)
+    → PreviewCanvas (montado solo al armar) evalúa previewCode en instancia Hydra propia
+    → el canvas principal NUNCA cambia hasta Apply (`applyArmedSlot`)
 ```
 
 ### Key Types (`stores/chain-store.ts`)
 
-- `PadSlot extends ActivePad`: `{ isActive, isExtra, mode, ... }`
+- `PadSlot extends ActivePad`: `{ isActive, isExtra, ... }` (sin `mode`: T/M eliminado)
+- **`isBypassed?: boolean`** (en `ActivePad`) — el pad sigue en `activePads` (posición por `activatedAt` + params) pero el compilador lo saltea; `toggleBypass(instanceId)` lo alterna; se resetea al desactivar el pad y se persiste en favoritos
 - **`padSlots[]`** es la fuente de verdad; **`activePads[]`** derivado
 - **`selectedSlotId: string | null`** — pad enfocado en ParamPanel; persiste aunque se apague
-- **`setSlotMode(slotId, mode)`** — toggle/momentary en el store (no estado local)
+- **`momentarySlotId: string | null`** — slot activado por long-press; `holdSlot`/`releaseSlot` lo gestionan sin crear slots extra
+- **`lastSafeCode`** — snapshot de recuperación; `markSafeCode` guarda SOLO `compiledCode` (nunca previews)
 - Selectors: `selectDetailPad`, `selectMostRecentActivePad`, `selectIsPadActive`, `selectActivePadInstance`
 - `initPadSlots()` crea **1 slot base por función** del registro (`functionId-1`); extras vía `addSlot`
 
 ### Chain Compilation (`lib/chain-compiler.ts`)
 
-1. Pads ordenados por `activatedAt`
-2. Si el primer pad no es source → prepend `solid(0,0,0)`
-3. Sources adicionales ignoradas (linear chain v1)
-4. Modulate/blend usan `secondarySourceId` + `secondaryParams` del pad
-5. Termina en `.out()` o `.out(oN)`
+1. Pads bypasseados (`isBypassed`) se filtran antes de emitir; si todos quedan bypasseados el buffer cuenta como cadena vacía
+2. Pads ordenados por `activatedAt`
+3. Si el primer pad no es source → prepend `solid(0,0,0)`
+4. Sources adicionales ignoradas (linear chain v1)
+5. Modulate/blend usan `secondarySourceId` + `secondaryParams` del pad
+6. Termina en `.out()` o `.out(oN)`
 
 ## Steps (when modifying the launchpad)
 

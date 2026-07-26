@@ -33,6 +33,7 @@ export function ChainChips({
         const def = getFunctionDef(pad.functionId)
         const label = def?.label ?? pad.functionId
         const isHighlighted = highlightId === pad.instanceId
+        const isBypassed = !!pad.isBypassed
         const Tag = onChipClick ? "button" : "span"
 
         return (
@@ -47,12 +48,13 @@ export function ChainChips({
                 : {})}
               className={cn(
                 "font-mono text-[9px] px-1 py-0.5 rounded transition-all",
-                onChipClick && "hover:bg-white/5 cursor-pointer"
+                onChipClick && "hover:bg-white/5 cursor-pointer",
+                isBypassed && "line-through opacity-40"
               )}
               style={{
                 color,
                 backgroundColor: `${color}${isHighlighted ? "28" : "15"}`,
-                border: `1px solid ${color}${isHighlighted ? "80" : "30"}`,
+                border: `1px ${isBypassed ? "dashed" : "solid"} ${color}${isHighlighted ? "80" : "30"}`,
                 boxShadow: isHighlighted ? `0 0 8px ${color}55` : undefined,
               }}
             >

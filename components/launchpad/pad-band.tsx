@@ -12,15 +12,13 @@ import { useLaunchpadKeys } from "@/hooks/use-launchpad-keys"
 
 export function PadBand() {
   const padSlots = useChainStore((s) => s.padSlots)
-  const activePads = useChainStore((s) => s.activePads)
   const toggleSlot = useChainStore((s) => s.toggleSlot)
   const addSlot = useChainStore((s) => s.addSlot)
   const removeSlot = useChainStore((s) => s.removeSlot)
-  const activatePad = useChainStore((s) => s.activatePad)
-  const deactivatePad = useChainStore((s) => s.deactivatePad)
+  const holdSlot = useChainStore((s) => s.holdSlot)
+  const releaseSlot = useChainStore((s) => s.releaseSlot)
   const clearAll = useChainStore((s) => s.clearAll)
   const selectSlot = useChainStore((s) => s.selectSlot)
-  const setSlotMode = useChainStore((s) => s.setSlotMode)
   const armSlot = useChainStore((s) => s.armSlot)
   const disarmSlot = useChainStore((s) => s.disarmSlot)
 
@@ -41,32 +39,6 @@ export function PadBand() {
       selectSlot(slotId)
     },
     [selectSlot]
-  )
-
-  const handleModeChange = useCallback(
-    (slotId: string, mode: "toggle" | "momentary") => {
-      setSlotMode(slotId, mode)
-    },
-    [setSlotMode]
-  )
-
-  const handleMomentaryStart = useCallback(
-    (slotId: string) => {
-      const slot = padSlots.find((s) => s.instanceId === slotId)
-      if (slot) {
-        selectSlot(slotId)
-        activatePad(slot.functionId, "momentary")
-      }
-    },
-    [padSlots, activatePad, selectSlot]
-  )
-
-  const handleMomentaryEnd = useCallback(
-    (slotId: string) => {
-      const pad = activePads.find((p) => p.instanceId === slotId && p.mode === "momentary")
-      if (pad) deactivatePad(pad.instanceId)
-    },
-    [activePads, deactivatePad]
   )
 
   const handleRandomize = useCallback(() => {
@@ -122,9 +94,8 @@ export function PadBand() {
               onDisarmSlot={disarmSlot}
               onRemoveSlot={removeSlot}
               onAddSlot={addSlot}
-              onModeChange={handleModeChange}
-              onMomentaryStart={handleMomentaryStart}
-              onMomentaryEnd={handleMomentaryEnd}
+              onMomentaryStart={holdSlot}
+              onMomentaryEnd={releaseSlot}
             />
           ) : null
         )}

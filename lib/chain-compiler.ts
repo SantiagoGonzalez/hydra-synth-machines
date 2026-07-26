@@ -51,9 +51,11 @@ function buildCallFragment(pad: ActivePad, def: HydraFunctionDef): string {
 
 /** Compila pads activos hacia un buffer concreto (.out() o .out(oN)) */
 export function compileChainToBuffer(activePads: ActivePad[], outputBuffer: OutputBuffer): string | null {
-  if (activePads.length === 0) return null
+  // Bypass: los pads bypasseados conservan posición/params pero no emiten fragmento
+  const audiblePads = activePads.filter((p) => !p.isBypassed)
+  if (audiblePads.length === 0) return null
 
-  const sorted = [...activePads].sort((a, b) => a.activatedAt - b.activatedAt)
+  const sorted = [...audiblePads].sort((a, b) => a.activatedAt - b.activatedAt)
   const firstDef = getFunctionDef(sorted[0].functionId)
   const hasSourceFirst = firstDef?.category === "source"
   const fragments: string[] = []

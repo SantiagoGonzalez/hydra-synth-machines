@@ -19,8 +19,9 @@ export interface ActivePad {
   params: Record<string, ParamValue>
   secondarySourceId?: string
   secondaryParams?: Record<string, ParamValue>
-  mode: "toggle" | "momentary"
   activatedAt: number
+  /** Bypass: el pad sigue en la cadena (posición y params) pero el compilador lo saltea */
+  isBypassed?: boolean
 }
 
 /** Slot de pad: extiende ActivePad con estado visible (activo/inactivo) y si es extra */
@@ -46,7 +47,6 @@ function initPadSlots(): PadSlot[] {
       params: getDefaultParams(fn),
       secondarySourceId: fn.secondarySourceId,
       secondaryParams: secDef ? getDefaultParams(secDef) : undefined,
-      mode: "toggle" as const,
       activatedAt: 0,
       isActive: false,
       isExtra: false,
@@ -138,15 +138,16 @@ interface ChainState {
   lastSafeCode: string
   armedSlotId: string | null
   selectedSlotId: string | null
+  momentarySlotId: string | null
 
   toggleSlot: (slotId: string) => void
   selectSlot: (slotId: string | null) => void
-  setSlotMode: (slotId: string, mode: "toggle" | "momentary") => void
   addSlot: (functionId: string) => void
   removeSlot: (slotId: string) => void
-  activatePad: (functionId: string, mode?: "toggle" | "momentary") => void
-  deactivatePad: (instanceId: string) => void
+  holdSlot: (slotId: string) => void
+  releaseSlot: (slotId: string) => void
   togglePad: (functionId: string) => void
+  toggleBypass: (instanceId: string) => void
   updateParam: (instanceId: string, paramName: string, value: ParamValue) => void
   updateSecondarySource: (instanceId: string, sourceId: string) => void
   updateSecondaryParam: (instanceId: string, paramName: string, value: ParamValue) => void
@@ -171,18 +172,10 @@ export const useChainStore = create<ChainState>((set, get) => ({
   lastSafeCode: EMPTY_CODE,
   armedSlotId: null,
   selectedSlotId: null,
+  momentarySlotId: null,
 
   selectSlot: (slotId) => {
     set({ selectedSlotId: slotId })
-  },
-
-  setSlotMode: (slotId, mode) => {
-    set((state) =>
-      updateChain(state.chains, state.editingOutput, (chain) => ({
-        ...chain,
-        padSlots: chain.padSlots.map((s) => (s.instanceId === slotId ? { ...s, mode } : s)),
-      }), state.armedSlotId, state.gridView)
-    )
   },
 
   toggleSlot: (slotId) => {
@@ -190,8 +183,24 @@ export const useChainStore = create<ChainState>((set, get) => ({
       updateChain(state.chains, state.editingOutput, (chain) => {
         const padSlots = chain.padSlots.map((s) =>
           s.instanceId === slotId
-            ? { ...s, isActive: !s.isActive, activatedAt: !s.isActive ? Date.now() : s.activatedAt }
+            ? {
+                ...s,
+                isActive: !s.isActive,
+                activatedAt: !s.isActive ? Date.now() : s.activatedAt,
+                isBypassed: s.isActive ? false : s.isBypassed,
+              }
             : s
+        )
+        return { padSlots, activePads: deriveActivePads(padSlots) }
+      }, state.armedSlotId, state.gridView)
+    )
+  },
+
+  toggleBypass: (instanceId) => {
+    set((state) =>
+      updateChain(state.chains, state.editingOutput, (chain) => {
+        const padSlots = chain.padSlots.map((s) =>
+          s.instanceId === instanceId ? { ...s, isBypassed: !s.isBypassed } : s
         )
         return { padSlots, activePads: deriveActivePads(padSlots) }
       }, state.armedSlotId, state.gridView)
@@ -209,7 +218,6 @@ export const useChainStore = create<ChainState>((set, get) => ({
       params: getDefaultParams(def),
       secondarySourceId: def.secondarySourceId,
       secondaryParams: secDef ? getDefaultParams(secDef) : undefined,
-      mode: "toggle",
       activatedAt: 0,
       isActive: false,
       isExtra: true,
@@ -246,53 +254,45 @@ export const useChainStore = create<ChainState>((set, get) => ({
     })
   },
 
-  activatePad: (functionId, mode = "toggle") => {
-    const def = getFunctionDef(functionId)
-    if (!def) return
-    const secDef = def.secondarySourceId ? getFunctionDef(def.secondarySourceId) : undefined
-    const newSlot: PadSlot = {
-      instanceId: `${functionId}-${Date.now()}`,
-      functionId,
-      category: def.category,
-      params: getDefaultParams(def),
-      secondarySourceId: def.secondarySourceId,
-      secondaryParams: secDef ? getDefaultParams(secDef) : undefined,
-      mode,
-      activatedAt: Date.now(),
-      isActive: true,
-      isExtra: true,
-    }
-    set((state) =>
-      updateChain(state.chains, state.editingOutput, (chain) => {
-        const padSlots = [...chain.padSlots, newSlot]
-        return { padSlots, activePads: deriveActivePads(padSlots) }
-      }, state.armedSlotId, state.gridView)
-    )
-  },
-
-  deactivatePad: (instanceId) => {
+  // Momentary: holdSlot activa el slot presionado al final de la cadena sin crear slots extra
+  holdSlot: (slotId) => {
     set((state) => {
       const chain = state.chains[state.editingOutput]
-      const target = chain.padSlots.find((s) => s.instanceId === instanceId)
-      if (!target) return state
-
+      const slot = chain.padSlots.find((s) => s.instanceId === slotId)
+      if (!slot || slot.isActive) return state
       const result = updateChain(
         state.chains,
         state.editingOutput,
         (c) => {
-          const padSlots = target.isExtra
-            ? c.padSlots.filter((s) => s.instanceId !== instanceId)
-            : c.padSlots.map((s) =>
-                s.instanceId === instanceId ? { ...s, isActive: false } : s
-              )
+          const padSlots = c.padSlots.map((s) =>
+            s.instanceId === slotId ? { ...s, isActive: true, activatedAt: Date.now() } : s
+          )
           return { padSlots, activePads: deriveActivePads(padSlots) }
         },
-        state.armedSlotId === instanceId ? null : state.armedSlotId,
+        state.armedSlotId,
         state.gridView
       )
-      const selectedSlotId = state.selectedSlotId === instanceId ? null : state.selectedSlotId
-      const armedSlotId = state.armedSlotId === instanceId ? null : state.armedSlotId
-      return { ...result, selectedSlotId, armedSlotId }
+      return { ...result, momentarySlotId: slotId, selectedSlotId: slotId }
+    })
+  },
+
+  // Momentary: releaseSlot apaga el slot solo si fue activado por holdSlot
+  releaseSlot: (slotId) => {
+    set((state) => {
+      if (state.momentarySlotId !== slotId) return state
+      const result = updateChain(
+        state.chains,
+        state.editingOutput,
+        (c) => {
+          const padSlots = c.padSlots.map((s) =>
+            s.instanceId === slotId ? { ...s, isActive: false, isBypassed: false } : s
+          )
+          return { padSlots, activePads: deriveActivePads(padSlots) }
+        },
+        state.armedSlotId,
+        state.gridView
+      )
+      return { ...result, momentarySlotId: null }
     })
   },
 
@@ -353,7 +353,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       const chain = state.chains[state.editingOutput]
       const nextChain = {
         ...chain,
-        padSlots: chain.padSlots.map((s) => ({ ...s, isActive: false })),
+        padSlots: chain.padSlots.map((s) => ({ ...s, isActive: false, isBypassed: false })),
         activePads: [] as ActivePad[],
       }
       const nextChains = { ...state.chains, [state.editingOutput]: nextChain }
@@ -362,6 +362,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
         ...syncEditingView(nextChains, state.editingOutput, null, state.gridView),
         armedSlotId: null,
         selectedSlotId: null,
+        momentarySlotId: null,
       }
     })
   },
@@ -371,6 +372,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       editingOutput: buffer,
       armedSlotId: null,
       selectedSlotId: null,
+      momentarySlotId: null,
       ...syncEditingView(state.chains, buffer, null, state.gridView),
     }))
   },
@@ -425,7 +427,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   },
 
   markSafeCode: () => {
-    set((state) => ({ lastSafeCode: state.previewCode ?? state.compiledCode }))
+    set((state) => ({ lastSafeCode: state.compiledCode }))
   },
 
   restoreFromFavorite: (input) => {
@@ -467,6 +469,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
           available.params = normalizedParams
           available.secondarySourceId = p.secondarySourceId
           available.secondaryParams = normalizedSecondary
+          available.isBypassed = p.isBypassed
         } else {
           const def = getFunctionDef(p.functionId)
           if (!def) return
@@ -477,8 +480,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
             params: normalizedParams,
             secondarySourceId: p.secondarySourceId,
             secondaryParams: normalizedSecondary,
-            mode: "toggle",
             activatedAt: now + i,
+            isBypassed: p.isBypassed,
             isActive: true,
             isExtra: true,
           })
@@ -495,6 +498,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       chains: nextChains,
       armedSlotId: null,
       selectedSlotId: null,
+      momentarySlotId: null,
       ...syncEditingView(nextChains, editingOutput, null, gridView),
     })
   },
@@ -533,11 +537,6 @@ export function selectChainPositionMap(state: ChainState): Map<string, number> {
     .sort((a, b) => a.activatedAt - b.activatedAt)
     .forEach((pad, i) => map.set(pad.instanceId, i + 1))
   return map
-}
-
-/** Código efectivo para evaluar en canvas (preview staging o compilado) */
-export function selectEffectiveCode(state: ChainState): string {
-  return state.previewCode ?? state.compiledCode
 }
 
 /** Snapshot de todas las cadenas activas para favoritos v2 */

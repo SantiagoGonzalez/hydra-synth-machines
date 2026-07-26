@@ -4,7 +4,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react"
 import { Maximize2, AlertCircle, Heart, LayoutGrid } from "lucide-react"
-import { useChainStore, selectEffectiveCode, selectAllChainsSnapshot, type OutputBuffer } from "@/stores/chain-store"
+import { useChainStore, selectAllChainsSnapshot, type OutputBuffer } from "@/stores/chain-store"
 import { useFavoritesStore } from "@/stores/favorites-store"
 import { createHydraEvaluator, type HydraEvaluator } from "@/lib/chain-evaluator"
 import { OUTPUT_BUFFERS } from "@/lib/chain-compiler"
@@ -22,9 +22,7 @@ export function HydraCanvas() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
 
-  const effectiveCode = useChainStore(selectEffectiveCode)
   const compiledCode = useChainStore((s) => s.compiledCode)
-  const previewCode = useChainStore((s) => s.previewCode)
   const activePads = useChainStore((s) => s.activePads)
   const editingOutput = useChainStore((s) => s.editingOutput)
   const gridView = useChainStore((s) => s.gridView)
@@ -66,18 +64,18 @@ export function HydraCanvas() {
     const padCount = activePads.length
     const isStructural =
       padCount !== prevPadCountRef.current ||
-      effectiveCode.includes("render(") !== prevCodeRef.current.includes("render(")
+      compiledCode.includes("render(") !== prevCodeRef.current.includes("render(")
 
-    evaluatorRef.current.run(effectiveCode, isStructural)
+    evaluatorRef.current.run(compiledCode, isStructural)
 
     if (isStructural) {
       setIsFlashing(true)
       setTimeout(() => setIsFlashing(false), 200)
     }
 
-    prevCodeRef.current = effectiveCode
+    prevCodeRef.current = compiledCode
     prevPadCountRef.current = padCount
-  }, [effectiveCode, isReady, activePads.length])
+  }, [compiledCode, isReady, activePads.length])
 
   const handleDismissError = useCallback(() => {
     setError(null)
@@ -192,9 +190,6 @@ export function HydraCanvas() {
           </button>
         </div>
         <div className="flex items-center gap-1.5">
-          {previewCode && (
-            <span className="font-mono text-[8px] text-yellow-400/70 uppercase">preview</span>
-          )}
           {isReady ? (
             <div className="w-1.5 h-1.5 rounded-full bg-green-400/60" />
           ) : (

@@ -26,15 +26,17 @@ Guía para el panel lateral de parámetros del launchpad: selección de pad, edi
 
 ```
 ParamPanel (param-panel.tsx)          ← shell: layout, selección, chips activos
-├── PadParamPanel (param-slider.tsx)  ← detalle de UN pad: sliders + secondary source
-│   └── SingleParamSlider             ← Radix horizontal + input numérico editable
+├── PadParamPanel (param-slider.tsx)  ← detalle de UN pad: header (nombre + bypass) + sliders
+│   ├── SingleParamSlider             ← Radix horizontal + input numérico editable
+│   └── SourceSelector (source-selector.tsx) ← fuente secundaria con draft + Apply/Cancel
 └── GlobalFaders (global-faders.tsx)  ← SPEED/BRIGHT/DECAY/AMOUNT (local state)
 ```
 
 | Archivo | Responsabilidad | Líneas ~ |
 |---------|-----------------|----------|
 | `param-panel.tsx` | Orquestación, empty state, chips | 77 |
-| `param-slider.tsx` | Sliders + secondary source UI | 203 |
+| `param-slider.tsx` | Sliders + header detalle (bypass) | 307 |
+| `source-selector.tsx` | Selector de fuente secundaria diferido | 111 |
 | `global-faders.tsx` | Faders globales desacoplados | 86 |
 
 > **Nota:** `PadParamPanel` vive en `param-slider.tsx` por herencia del layout anterior. Refactor futuro: renombrar/mover a `pad-param-panel.tsx` y dejar `param-slider.tsx` solo para `SingleParamSlider`.
@@ -55,21 +57,15 @@ ParamPanel (param-panel.tsx)          ← shell: layout, selección, chips activ
 
 - `armSlot(slotId)` — único punto de entrada (shift+click en pad; futuro shift+tecla)
 - Pad armado NO está en `activePads`; preview vía `previewCode = compile(activePads + armed)`
-- `HydraCanvas` evalúa `previewCode ?? compiledCode`
-- ParamPanel: banner "ARMED" + botón Apply → `applyArmedSlot`
-- `disarmSlot` revierte canvas automáticamente
-
-### Extensión futura: hover-preview
-
-Patrón documentado para mini-canvas al hover sobre chip/pad armado:
-- Instancia Hydra separada (`hydra-thumbnail.tsx` como referencia)
-- No consumir buffers o0–o3 del canvas principal
-- Evaluar fragmento aislado del pad bajo preview
+- `previewCode` se evalúa SOLO en el mini-canvas PiP (`preview-canvas.tsx`), con instancia Hydra propia montada mientras `armedSlotId != null`
+- El canvas principal (`hydra-canvas.tsx`) corre únicamente `compiledCode`; no cambia hasta Apply
+- Apply disponible en dos lugares: banner "ARMED" del ParamPanel y footer del PiP → `applyArmedSlot`
+- `disarmSlot` desmonta el mini-canvas (libera su contexto WebGL vía `dispose` del evaluador)
 
 ### ParamValue (escalar | fn(time))
 
 - Tipo: `ParamValue = number | { kind: "fn"; shape; freq; amp; offset }` en `lib/param-value.ts`
-- Toggle `#` / `fn` por parámetro en `SingleParamSlider`
+- Toggle `#` / `fn` por parámetro en `SingleParamSlider` (`text-[10px]`, igual que los chips de shape `sin/cos/tan/linear`)
 - Compilador emite `({time}) => offset + amp * Math.sin(time * freq)` (variantes sin/cos/tan/linear)
 - Global faders siguen escalares
 
@@ -116,13 +112,23 @@ Fase posterior a fn(time); no inventar firmas hasta verificar en el índice Hydr
 - Valor desde `pad.params[name] ?? param.default`
 - Update: `updateParam(instanceId, name, value)` → recompila chain
 
-### Secondary source (modulate / blend)
+### Secondary source (modulate / blend) — selección diferida
 
 - Visible si `def.secondarySourceId` está definido en el registro
-- Botones de fuente: `getSourceOptions()` (todas las sources)
-- Selección: `updateSecondarySource(instanceId, sourceId)` — resetea `secondaryParams` a defaults
+- `SourceSelector` (`source-selector.tsx`): grilla agrupada de chips `text-[11px]` (target ≥28px) — generadores (`grid-cols-3`) vs buffers `src:o0..o3` (`grid-cols-4`), vía `getSourceOptions()`
+- **Draft local**: clickear una fuente distinta NO recompila; guarda borrador (borde amarillo dashed, distinto de la aplicada en color source sólido) y muestra "Apply source" / "Cancel"
+- Recién Apply llama `updateSecondarySource(instanceId, sourceId)` — resetea `secondaryParams` a defaults y recompila
+- El draft se descarta al cambiar de pad: el selector se monta con `key={pad.instanceId}`
 - Sliders secundarios: `updateSecondaryParam(instanceId, name, value)`
 - Color secundario: `CATEGORY_COLORS["source"]` atenuado
+
+### Bypass (por pad activo)
+
+- Toggle "bypass" junto al nombre de la función en el header de `PadParamPanel`; visible solo si el slot está activo
+- `toggleBypass(instanceId)` → el pad sigue en `activePads` (conserva `activatedAt` y params) pero `chain-compiler` lo saltea al emitir fragmentos
+- Si TODOS los pads de un buffer quedan bypasseados → buffer tratado como cadena vacía (sin bloque)
+- `isBypassed` se resetea al desactivar el pad (`toggleSlot` off, `releaseSlot`, `clearAll`); se **persiste** en favoritos como parte del snapshot
+- Visual: nombre tachado en el header, chip atenuado/tachado en `ChainChips`, badge "byp" + atenuación en el pad
 
 ### Instance label
 
@@ -198,7 +204,7 @@ Chip click
 - [ ] Extraer `PadParamPanel` → `pad-param-panel.tsx`
 - [ ] Renombrar `param-slider.tsx` → `single-param-slider.tsx` (o carpeta `param-controls/`)
 - [ ] Añadir `scrollbar-thin` al `aside` de ParamPanel
-- [ ] Badge/header del pad detail: nombre, categoría, estado activo/inactivo, modo T/M
+- [ ] Badge/header del pad detail: nombre, categoría, estado activo/inactivo
 
 ### Fase 2 — Selección y UX
 
@@ -224,7 +230,7 @@ Chip click
 ## Steps (when modifying)
 
 1. **UI-only en shell** → editar `param-panel.tsx`
-2. **Slider / secondary source** → editar `param-slider.tsx` (o `pad-param-panel.tsx` post-refactor)
+2. **Slider / header detalle** → editar `param-slider.tsx`; **selector de fuente** → `source-selector.tsx`
 3. **Nuevo param en registry** → automático vía `def.params.map`; verificar secondary si modulate/blend
 4. **Cambio de selección** → store: `selectSlot`, `selectDetailPad`; no duplicar lógica en componente
 5. **Global faders** → hoy solo `global-faders.tsx`; si se cablean, tocar store + compiler

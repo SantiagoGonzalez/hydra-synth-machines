@@ -7,9 +7,9 @@ import * as SliderPrimitive from "@radix-ui/react-slider"
 import {
   CATEGORY_COLORS,
   getFunctionDef,
-  getSourceOptions,
   type HydraParam,
 } from "@/lib/hydra-registry"
+import { SourceSelector } from "@/components/launchpad/source-selector"
 import {
   isParamFn,
   scalarPreview,
@@ -85,7 +85,7 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
             type="button"
             onClick={toggleMode}
             className={cn(
-              "font-mono text-[7px] px-1 py-px rounded border uppercase tracking-wider transition-colors",
+              "font-mono text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider transition-colors",
               isFn
                 ? "border-yellow-400/40 text-yellow-400/80 bg-yellow-400/10"
                 : "border-white/10 text-white/25 hover:text-white/50"
@@ -116,14 +116,14 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
 
       {isFn && isParamFn(value) ? (
         <div className="flex flex-col gap-2 pl-1 border-l border-white/10">
-          <div className="flex gap-0.5 flex-wrap">
+          <div className="flex gap-1 flex-wrap">
             {FN_SHAPES.map((shape) => (
               <button
                 key={shape}
                 type="button"
                 onClick={() => onChange({ ...value, shape })}
                 className={cn(
-                  "font-mono text-[7px] px-1 py-px rounded border uppercase",
+                  "font-mono text-[10px] px-1.5 py-0.5 rounded border uppercase",
                   value.shape === shape
                     ? "border-white/30 text-white/60 bg-white/10"
                     : "border-white/5 text-white/20 hover:text-white/40"
@@ -203,10 +203,13 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
   const updateParam = useChainStore((s) => s.updateParam)
   const updateSecondarySource = useChainStore((s) => s.updateSecondarySource)
   const updateSecondaryParam = useChainStore((s) => s.updateSecondaryParam)
+  const toggleBypass = useChainStore((s) => s.toggleBypass)
   const padSlots = useChainStore((s) => s.padSlots)
   const def = getFunctionDef(pad.functionId)
 
   if (!def) return null
+
+  const isActiveSlot = padSlots.some((s) => s.instanceId === pad.instanceId && s.isActive)
 
   const activeOfSameType = padSlots.filter((s) => s.functionId === pad.functionId && s.isActive)
   const instanceIndex = activeOfSameType.findIndex((s) => s.instanceId === pad.instanceId)
@@ -227,17 +230,37 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
 
   const mainColor = CATEGORY_COLORS[pad.category]
   const sourceColor = CATEGORY_COLORS["source"]
-  const sourceOptions = getSourceOptions()
   const selectedSecDef = selectedSourceId ? getFunctionDef(selectedSourceId) : undefined
 
   return (
     <div className="flex flex-col gap-3">
-      <span
-        className={cn("font-mono text-[10px] font-semibold", isArmed && "text-yellow-400/90")}
-        style={!isArmed ? { color: mainColor } : undefined}
-      >
-        {def.label}{instanceLabel}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            "font-mono text-[10px] font-semibold",
+            isArmed && "text-yellow-400/90",
+            pad.isBypassed && "line-through opacity-50"
+          )}
+          style={!isArmed ? { color: mainColor } : undefined}
+        >
+          {def.label}{instanceLabel}
+        </span>
+        {isActiveSlot && (
+          <button
+            type="button"
+            onClick={() => toggleBypass(pad.instanceId)}
+            className={cn(
+              "font-mono text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider transition-colors shrink-0",
+              pad.isBypassed
+                ? "border-amber-400/50 text-amber-300 bg-amber-400/10"
+                : "border-white/10 text-white/25 hover:text-white/50"
+            )}
+            title={pad.isBypassed ? "Re-enable pad in chain" : "Bypass pad (keeps position and params)"}
+          >
+            {pad.isBypassed ? "bypassed" : "bypass"}
+          </button>
+        )}
+      </div>
 
       {hasMainParams && (
         <div className="flex flex-col gap-3">
@@ -258,33 +281,11 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
           <span className="font-mono text-[9px] text-white/30 uppercase tracking-wider">
             source
           </span>
-          <div className="flex gap-1 flex-wrap">
-            {sourceOptions.map((src) => {
-              const isSelected = src.id === selectedSourceId
-              return (
-                <button
-                  key={src.id}
-                  type="button"
-                  onClick={() => updateSecondarySource(pad.instanceId, src.id)}
-                  className="font-mono text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors"
-                  style={
-                    isSelected
-                      ? {
-                          borderColor: sourceColor,
-                          color: sourceColor,
-                          backgroundColor: `${sourceColor}22`,
-                        }
-                      : {
-                          borderColor: "rgba(255,255,255,0.1)",
-                          color: "rgba(255,255,255,0.25)",
-                        }
-                  }
-                >
-                  {src.label}
-                </button>
-              )
-            })}
-          </div>
+          <SourceSelector
+            key={pad.instanceId}
+            appliedSourceId={selectedSourceId}
+            onApply={(sourceId) => updateSecondarySource(pad.instanceId, sourceId)}
+          />
 
           {selectedSecDef && selectedSecDef.params.length > 0 && (
             <div className="flex flex-col gap-3 mt-1">

@@ -107,10 +107,21 @@ export async function createHydraEvaluator(
     detectAudio: false,
     enableStreamCapture: false,
     makeGlobal: false,
+    autoLoop: false,
   })
 
   const synth = hydra.synth
   let _ready = true
+
+  // Loop raf propio (autoLoop de hydra no se puede detener): permite liberar el engine al desmontar
+  let rafId = 0
+  let lastFrame = performance.now()
+  const frame = (now: number) => {
+    hydra.tick(now - lastFrame)
+    lastFrame = now
+    rafId = requestAnimationFrame(frame)
+  }
+  rafId = requestAnimationFrame(frame)
 
   const run = (code: string, structural = false) => {
     if (!_ready) return
@@ -148,8 +159,10 @@ export async function createHydraEvaluator(
 
   const dispose = () => {
     _ready = false
+    cancelAnimationFrame(rafId)
     try {
       synth.hush()
+      hydra.regl?.destroy()
     } catch {
       // ignorar errores en cleanup
     }
