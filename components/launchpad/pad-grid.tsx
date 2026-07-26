@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 
 const GRID_COLS = 8
 const GRID_MIN_CELLS = 16
+const KEY_BOUND_CELLS = 16
 const MIN_ROW_PX = 64
 
 interface PadGridProps {
@@ -25,6 +26,7 @@ interface PadGridProps {
   onSelectSlot: (slotId: string) => void
   onArmSlot: (slotId: string) => void
   onDisarmSlot: () => void
+  onApplyArmed: () => void
   onRemoveSlot: (slotId: string) => void
   onAddSlot: (functionId: string) => void
   isAddPadOpen: boolean
@@ -39,6 +41,7 @@ export function PadGrid({
   onSelectSlot,
   onArmSlot,
   onDisarmSlot,
+  onApplyArmed,
   onRemoveSlot,
   onAddSlot,
   isAddPadOpen,
@@ -105,12 +108,13 @@ export function PadGrid({
               isBypassed={slot.isActive && !!slot.isBypassed}
               chainPosition={slot.isActive ? chainPositions.get(slot.instanceId) : undefined}
               slotLabel={getSlotLabel(slot)}
-              keyHint={keyLabelForIndex(index)}
+              keyHint={index < KEY_BOUND_CELLS ? keyLabelForIndex(index) : undefined}
               isExtra={slot.isExtra}
               onToggle={() => onToggleSlot(slot.instanceId)}
               onSelect={() => onSelectSlot(slot.instanceId)}
               onArm={() => onArmSlot(slot.instanceId)}
               onDisarm={onDisarmSlot}
+              onApply={onApplyArmed}
               onMomentaryStart={() => onMomentaryStart(slot.instanceId)}
               onMomentaryEnd={() => onMomentaryEnd(slot.instanceId)}
               onRemove={() => onRemoveSlot(slot.instanceId)}

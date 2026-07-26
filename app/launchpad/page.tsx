@@ -3,11 +3,17 @@
 // Página del launchpad VJ: layout de 3 zonas con canvas, panel de params y banda de pads
 
 import Link from "next/link"
+import type { PointerEvent } from "react"
 import { ArrowLeft, Radio } from "lucide-react"
 import { StageColumn } from "@/components/launchpad/stage-column"
 import { ParamPanel } from "@/components/launchpad/param-panel"
 import { PadBand } from "@/components/launchpad/pad-band"
 import { FavoritesDialog } from "@/components/launchpad/favorites-dialog"
+
+function blurMouseActivatedButton(event: PointerEvent<HTMLDivElement>) {
+  if (event.pointerType !== "mouse" || !(event.target instanceof HTMLElement)) return
+  event.target.closest("button")?.blur()
+}
 
 export default function LaunchpadPage() {
   return (
@@ -19,7 +25,10 @@ export default function LaunchpadPage() {
         </p>
       </div>
 
-      <div className="hidden lg:flex h-screen flex-col overflow-hidden bg-black text-white">
+      <div
+        className="hidden lg:flex h-screen flex-col overflow-hidden bg-black text-white"
+        onPointerUp={blurMouseActivatedButton}
+      >
         <header className="shrink-0 h-9 flex items-center justify-between px-3 border-b border-white/5">
           <Link
             href="/"
@@ -49,7 +58,7 @@ export default function LaunchpadPage() {
 
         <footer className="shrink-0 px-3 py-1.5 border-t border-white/5">
           <p className="font-mono text-[8px] text-white/15 text-center tracking-wider">
-            Q–I / A–K / Z–, pads · space add · 1–5 tabs · shift+1–4 outputs · hold momentary · shift arm · alt select · enter apply · esc disarm · shift+backspace delete
+            Q–I / A–K pads · Z fn · X source · B bypass · P params · O pads · arrows adjust · space add · 1–5 tabs · shift+1–4 outputs
           </p>
         </footer>
       </div>

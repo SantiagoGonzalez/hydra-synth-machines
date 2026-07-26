@@ -1,7 +1,7 @@
 # Skill: launchpad-keyboard
 
 ## Purpose
-Guía para atajos de teclado del launchpad: implementación actual (tabs 1–5) y extensión futura (disparo posicional de pads, overrides configurables, MIDI).
+Guía para atajos de teclado del launchpad: tabs, disparo posicional, panel de params y la capa de direcciones reutilizable por MIDI.
 
 ## Inputs
 - Nuevo binding de tecla
@@ -60,31 +60,39 @@ Modelo implementado: **posicional por defecto**, sin overrides ni persistencia.
 |-------------|---------------------|
 | Fila 1 (cols 0–7) | Q W E R T Y U I |
 | Fila 2 (cols 0–7) | A S D F G H J K |
-| Fila 3 (cols 0–7) | Z X C V B N M , |
+| Fila 3 | Acciones de params: Z, X, B |
 
 - `lib/pad-key-map.ts` define el mapa físico y las etiquetas visibles.
 - `lib/pad-grid-order.ts` es la única fuente del orden: registro → slots base → extras.
 - La celda AddPad y placeholders no reciben tecla.
-- Los pads muestran su tecla asignada; las filas posteriores a la tercera solo se controlan con mouse.
+- Los pads muestran su tecla asignada y solo las primeras 16 celdas reciben binding.
+- Los extras que exceden la grilla 8×2 se operan con mouse.
 
 ### Acciones de teclado
 
 | Tecla | Acción |
 |-------|--------|
-| Q–I / A–K / Z–, | Tap: toggle + select; mantener ≥250ms: momentary hasta soltar |
+| Q–I / A–K | Tap: toggle + select; mantener ≥250ms: momentary hasta soltar |
 | Shift + tecla de pad | Armar/desarmar un pad inactivo para preview |
 | Alt + tecla de pad | Seleccionar sin toggle |
+| Ctrl+click | Aplicar el pad armado |
 | Space | Abrir AddPad de la categoría activa y enfocar su búsqueda |
 | 1–5 | Cambiar tab de categoría |
 | Shift+1–4 | Cambiar el output editado: o0–o3 |
-| Enter | Aplicar el pad armado |
+| P / O | Mostrar el foco de params / volver al foco de pads |
+| ↑ / ↓ | Recorrer los controles del panel de params |
+| ← / → | Ajustar 1% del rango; Shift ajusta 10% |
+| Ctrl+← / → | Recorrer pads activos de la cadena |
+| Z / X / B | Alternar scalar/fn, enfocar source, bypass del pad |
+| Enter | Aplicar el draft de source enfocado o el pad armado |
 | Escape | Desarmar el pad |
 | Shift+Backspace/Delete | Eliminar el slot extra seleccionado |
 
 ### Guardas
 
 - Ignorar repeticiones automáticas de teclas.
-- No disparar atajos en inputs editables, elementos interactivos o overlays Radix abiertos.
+- No disparar atajos en inputs editables u overlays Radix abiertos.
+- Los botones activados por mouse pierden foco después del pointerup, para no bloquear la grilla.
 - Usar `event.code` para conservar las posiciones físicas entre layouts de teclado.
 
 ---
@@ -103,8 +111,8 @@ Modelo implementado: **posicional por defecto**, sin overrides ni persistencia.
 
 - **Opt-in por zona** — solo launchpad page monta el hook
 - **No global hotkeys** en docs/playground sin revisar conflictos
-- **Focus model** — hoy no hay `focusedCellIndex`; agregar al store si se implementa navegación con flechas
-- **selectedSlotId** ya existe para ParamPanel; reutilizar para teclado
+- **Focus model** — `focusZone` + `focusedControlId` viven en el store y no dependen del foco DOM.
+- **MIDI** — `lib/launchpad-controls.ts` expone ControlAddress y valores normalizados reutilizables.
 
 ---
 
@@ -120,6 +128,6 @@ Modelo implementado: **posicional por defecto**, sin overrides ni persistencia.
 
 ## Composition Notes
 
-- **Store**: `selectedSlotId`, `selectSlot`, `toggleSlot`
+- **Store**: `selectedSlotId`, `focusZone`, `focusedControlId`, `selectControlList`
 - **Grid**: `pad-band-and-grid.skill.md` — orden de celdas
 - **Layout**: footer cheatsheet en `launchpad-layout.skill.md`

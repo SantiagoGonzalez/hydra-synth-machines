@@ -22,24 +22,24 @@ Guía para el panel lateral de parámetros del launchpad: selección de pad, edi
 
 ## Architecture
 
-### Component split (intencional pero mejorable)
+### Component split
 
 ```
-ParamPanel (param-panel.tsx)          ← shell: layout, selección, chips activos
-├── PadParamPanel (param-slider.tsx)  ← detalle de UN pad: header (nombre + bypass) + sliders
-│   ├── SingleParamSlider             ← Radix horizontal + input numérico editable
-│   └── SourceSelector (source-selector.tsx) ← fuente secundaria con draft + Apply/Cancel
-└── GlobalFaders (global-faders.tsx)  ← SPEED/BRIGHT/DECAY/AMOUNT (local state)
+ParamPanel (param-panel.tsx)               ← shell: layout, selección, chips activos
+├── PadParamPanel (pad-param-panel.tsx)    ← detalle de UN pad: header + sliders + source
+│   ├── SingleParamSlider (param-slider.tsx)
+│   └── SourceSelector (source-selector.tsx) ← draft en store + Apply/Cancel + Ctrl+click Apply
+└── GlobalFaders (global-faders.tsx)        ← SPEED/BRIGHT/DECAY/AMOUNT (store, no compiler)
 ```
 
-| Archivo | Responsabilidad | Líneas ~ |
-|---------|-----------------|----------|
-| `param-panel.tsx` | Orquestación, empty state, chips | 77 |
-| `param-slider.tsx` | Sliders + header detalle (bypass) | 307 |
-| `source-selector.tsx` | Selector de fuente secundaria diferido | 111 |
-| `global-faders.tsx` | Faders globales desacoplados | 86 |
-
-> **Nota:** `PadParamPanel` vive en `param-slider.tsx` por herencia del layout anterior. Refactor futuro: renombrar/mover a `pad-param-panel.tsx` y dejar `param-slider.tsx` solo para `SingleParamSlider`.
+| Archivo | Responsabilidad |
+|---------|-----------------|
+| `param-panel.tsx` | Orquestación, empty state, chips |
+| `pad-param-panel.tsx` | Header, bypass, wire de controles con `controlId` |
+| `param-slider.tsx` | `SingleParamSlider` + anillo de foco |
+| `source-selector.tsx` | Selector de fuente secundaria diferido |
+| `global-faders.tsx` | Faders globales en store |
+| `lib/launchpad-controls.ts` | `ControlAddress`, lista plana y valores normalizados (base MIDI) |
 
 ### Layout placement
 
@@ -94,8 +94,10 @@ Fase posterior a fn(time); no inventar firmas hasta verificar en el índice Hydr
 | Origen | Acción |
 |--------|--------|
 | Click normal en pad | `toggleSlot` + `selectSlot` |
-| Ctrl/Alt+click o right-click | solo `selectSlot` |
+| Alt+click o right-click | solo `selectSlot` |
+| Ctrl+click | aplicar pad armado |
 | Chip "Active" en panel | `selectSlot(instanceId)` |
+| Ctrl+← / → | recorrer pads activos de la cadena |
 
 ### Comportamiento clave
 
@@ -117,15 +119,17 @@ Fase posterior a fn(time); no inventar firmas hasta verificar en el índice Hydr
 
 - Visible si `def.secondarySourceId` está definido en el registro
 - `SourceSelector` (`source-selector.tsx`): grilla agrupada de chips `text-[11px]` (target ≥28px) — generadores (`grid-cols-3`) vs buffers `src:o0..o3` (`grid-cols-4`), vía `getSourceOptions()`
-- **Draft local**: clickear una fuente distinta NO recompila; guarda borrador (borde amarillo dashed, distinto de la aplicada en color source sólido) y muestra "Apply source" / "Cancel"
+- **Draft en store** (`sourceDraftId`): clickear una fuente distinta NO recompila; guarda borrador (borde amarillo dashed) y muestra "Apply source" / "Cancel"
+- Ctrl+click elige y aplica en un paso; Enter aplica el draft si el control source está enfocado
 - Recién Apply llama `updateSecondarySource(instanceId, sourceId)` — resetea `secondaryParams` a defaults y recompila
-- El draft se descarta al cambiar de pad: el selector se monta con `key={pad.instanceId}`
+- El draft se limpia al cambiar de pad (`selectSlot` / `cycleChainPad`)
 - Sliders secundarios: `updateSecondaryParam(instanceId, name, value)`
 - Color secundario: `CATEGORY_COLORS["source"]` atenuado
 
 ### Bypass (por pad activo)
 
-- Toggle "bypass" junto al nombre de la función en el header de `PadParamPanel`; visible solo si el slot está activo
+- Toggle "bypass" junto al nombre de la función en el header de `PadParamPanel`; también con tecla `B`
+- Visible solo si el slot está activo
 - `toggleBypass(instanceId)` → el pad sigue en `activePads` (conserva `activatedAt` y params) pero `chain-compiler` lo saltea al emitir fragmentos
 - Si TODOS los pads de un buffer quedan bypasseados → buffer tratado como cadena vacía (sin bloque)
 - `isBypassed` se resetea al desactivar el pad (`toggleSlot` off, `releaseSlot`, `clearAll`); se **persiste** en favoritos como parte del snapshot
@@ -157,13 +161,14 @@ activeOfSameType = padSlots.filter(s => s.functionId === pad.functionId && s.isA
 ## GlobalFaders (estado actual)
 
 ```ts
-// global-faders.tsx — useState local, NO conectado al store ni compiler
+// lib/global-faders.ts — config compartida
+// chain-store.globalFaders + setGlobalFader
 { speed, brightness, decay, amount }
 ```
 
-- UI funcional pero **sin efecto** en `compiledCode`
-- Duplica concepto de params globales que deberían vivir en store
-- Refactor futuro: mover a `chain-store` o capa de "machine globals" y pasar a `compileChain`
+- Viven en el store y son navegables por teclado (`buildControlList`)
+- Todavía **sin efecto** en `compiledCode`
+- Refactor futuro: pasar a `compileChain` / settings Hydra
 
 ---
 
@@ -188,7 +193,7 @@ Chip click
 
 | Limitación | Impacto |
 |------------|---------|
-| `PadParamPanel` en `param-slider.tsx` | Naming confuso; acopla shell y detalle |
+| `PadParamPanel` en `pad-param-panel.tsx` | Separado del slider; conserva contratos de store |
 | Global faders locales | No afectan output Hydra |
 | Sin indicador visual de pad inactivo seleccionado | Usuario puede editar params de pad apagado sin feedback claro |
 | Chips solo muestran activos (excepto detail) | Pad seleccionado inactivo no aparece en lista Active |
@@ -200,9 +205,9 @@ Chip click
 
 ## Future Steps (refactor roadmap)
 
-### Fase 1 — Estructura y claridad
+### Fase 1 — Estructura y claridad (completada)
 
-- [ ] Extraer `PadParamPanel` → `pad-param-panel.tsx`
+- [x] Extraer `PadParamPanel` → `pad-param-panel.tsx`
 - [ ] Renombrar `param-slider.tsx` → `single-param-slider.tsx` (o carpeta `param-controls/`)
 - [ ] Añadir `scrollbar-thin` al `aside` de ParamPanel
 - [ ] Badge/header del pad detail: nombre, categoría, estado activo/inactivo
@@ -211,12 +216,13 @@ Chip click
 
 - [ ] Mostrar pad seleccionado en sección Active aunque esté inactivo (chip "selected")
 - [ ] Resaltar chip del pad actual en lista Active
-- [ ] Navegación teclado: ↑/↓ entre pads activos en panel (reutilizar `selectedSlotId`)
+- [x] Foco propio para controles: `focusZone` + `focusedControlId`
+- [x] Navegación: ↑/↓ controles, Ctrl+←/→ pads activos, ←/→ ajuste porcentual
 - [ ] Collapse/expand secciones Global vs Detail
 
 ### Fase 3 — Controles y globals
 
-- [ ] Cablear `GlobalFaders` al store + compiler (speed → time, brightness → post-process, etc.)
+- [x] Cablear `GlobalFaders` al store (todavía no al compiler)
 - [ ] Unificar `GlobalFader` y `SingleParamSlider` en primitiva compartida
 - [ ] Soporte de control types por metadata (`HydraParam` → knob, slider, toggle)
 
@@ -231,10 +237,10 @@ Chip click
 ## Steps (when modifying)
 
 1. **UI-only en shell** → editar `param-panel.tsx`
-2. **Slider / header detalle** → editar `param-slider.tsx`; **selector de fuente** → `source-selector.tsx`
+2. **Slider** → editar `param-slider.tsx`; **header/detalle** → `pad-param-panel.tsx`; **selector de fuente** → `source-selector.tsx`
 3. **Nuevo param en registry** → automático vía `def.params.map`; verificar secondary si modulate/blend
 4. **Cambio de selección** → store: `selectSlot`, `selectDetailPad`; no duplicar lógica en componente
-5. **Global faders** → hoy solo `global-faders.tsx`; si se cablean, tocar store + compiler
+5. **Global faders** → `global-faders.tsx` + store; siguen sin efecto en el compiler
 6. **Actualizar esta skill** si cambia contrato de selección o estructura de archivos
 
 ---

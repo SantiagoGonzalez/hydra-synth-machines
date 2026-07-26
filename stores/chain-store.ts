@@ -9,6 +9,13 @@ import {
   OUTPUT_BUFFERS,
 } from "@/lib/chain-compiler"
 import { normalizeParamValue, type ParamValue } from "@/lib/param-value"
+import { getDefaultGlobalFaders, type GlobalFaderId, type GlobalFaderValues } from "@/lib/global-faders"
+import {
+  buildControlList,
+  nudgeByFraction,
+  normalizedToValue,
+  valueToNormalized,
+} from "@/lib/launchpad-controls"
 
 export type { OutputBuffer }
 
@@ -146,6 +153,10 @@ interface ChainState {
   armedSlotId: string | null
   selectedSlotId: string | null
   momentarySlotId: string | null
+  focusZone: "pads" | "params"
+  focusedControlId: string | null
+  sourceDraftId: string | null
+  globalFaders: GlobalFaderValues
 
   toggleSlot: (slotId: string) => void
   selectSlot: (slotId: string | null) => void
@@ -166,6 +177,18 @@ interface ChainState {
   applyArmedSlot: () => void
   markSafeCode: () => void
   restoreFromFavorite: (input: Partial<Record<OutputBuffer, ActivePad[]>> | ActivePad[]) => void
+  setFocusZone: (zone: "pads" | "params") => void
+  setFocusedControl: (controlId: string | null) => void
+  moveFocusedControl: (delta: number) => void
+  nudgeFocusedControl: (fraction: number) => void
+  setControlNormalized: (controlId: string, normalized: number) => void
+  toggleFocusedParamMode: () => void
+  focusSourceControl: () => void
+  toggleDetailBypass: () => void
+  cycleChainPad: (delta: number) => void
+  setSourceDraft: (sourceId: string | null) => void
+  applySourceDraft: () => void
+  setGlobalFader: (faderId: GlobalFaderId, value: number) => void
 }
 
 export const useChainStore = create<ChainState>((set, get) => ({
@@ -180,9 +203,178 @@ export const useChainStore = create<ChainState>((set, get) => ({
   armedSlotId: null,
   selectedSlotId: null,
   momentarySlotId: null,
+  focusZone: "pads",
+  focusedControlId: null,
+  sourceDraftId: null,
+  globalFaders: getDefaultGlobalFaders(),
 
   selectSlot: (slotId) => {
-    set({ selectedSlotId: slotId })
+    set({ selectedSlotId: slotId, focusedControlId: null, sourceDraftId: null })
+  },
+
+  setFocusZone: (focusZone) => {
+    set((state) => {
+      if (focusZone === "pads") return { focusZone, focusedControlId: null }
+      const controls = selectControlList(state)
+      return { focusZone, focusedControlId: state.focusedControlId ?? controls[0]?.id ?? null }
+    })
+  },
+
+  setFocusedControl: (focusedControlId) => set({ focusZone: "params", focusedControlId }),
+
+  moveFocusedControl: (delta) => {
+    set((state) => {
+      const controls = selectControlList(state)
+      if (controls.length === 0) return state
+      const currentIndex = controls.findIndex((control) => control.id === state.focusedControlId)
+      const startIndex = currentIndex === -1 ? 0 : currentIndex
+      const nextIndex = (startIndex + delta + controls.length) % controls.length
+      return { focusZone: "params", focusedControlId: controls[nextIndex].id }
+    })
+  },
+
+  nudgeFocusedControl: (fraction) => {
+    const state = get()
+    const controls = selectControlList(state)
+    const control = controls.find((candidate) => candidate.id === state.focusedControlId) ?? controls[0]
+    if (!control) return
+    if (state.focusedControlId !== control.id) get().setFocusedControl(control.id)
+    const value = nudgeByFraction(control, fraction)
+    get().setControlNormalized(
+      control.id,
+      valueToNormalized(value, control.min, control.max)
+    )
+  },
+
+  setControlNormalized: (controlId, normalized) => {
+    const state = get()
+    const control = selectControlList(state).find((candidate) => candidate.id === controlId)
+    if (!control) return
+    const value =
+      control.options && control.options.length > 0
+        ? Math.round(normalizedToValue(normalized, control.min, control.max))
+        : normalizedToValue(normalized, control.min, control.max)
+
+    if (control.address.kind === "param") {
+      const pad = selectDetailPad(state)
+      const params = control.address.scope === "main" ? pad?.params : pad?.secondaryParams
+      const current = params?.[control.address.paramName]
+      if (current && typeof current !== "number") {
+        const next = { ...current, offset: value }
+        if (control.address.scope === "main") {
+          get().updateParam(control.address.padId, control.address.paramName, next)
+        } else {
+          get().updateSecondaryParam(control.address.padId, control.address.paramName, next)
+        }
+        return
+      }
+      if (control.address.scope === "main") {
+        get().updateParam(control.address.padId, control.address.paramName, value)
+      } else {
+        get().updateSecondaryParam(control.address.padId, control.address.paramName, value)
+      }
+      return
+    }
+
+    if (control.address.kind === "fn") {
+      const pad = selectDetailPad(get())
+      if (!pad || pad.instanceId !== control.address.padId) return
+      const params = control.address.scope === "main" ? pad.params : pad.secondaryParams
+      const current = params?.[control.address.paramName]
+      if (!current || typeof current === "number") return
+      const next = { ...current, [control.address.field]: value }
+      if (control.address.scope === "main") {
+        get().updateParam(control.address.padId, control.address.paramName, next)
+      } else {
+        get().updateSecondaryParam(control.address.padId, control.address.paramName, next)
+      }
+      return
+    }
+
+    if (control.address.kind === "source") {
+      const sourceId = control.options?.[Math.round(value)]
+      if (sourceId) get().setSourceDraft(sourceId)
+      return
+    }
+
+    get().setGlobalFader(control.address.faderId, value)
+  },
+
+  toggleFocusedParamMode: () => {
+    const state = get()
+    const controls = selectControlList(state)
+    const focused = controls.find((candidate) => candidate.id === state.focusedControlId) ?? controls[0]
+    if (!focused) return
+    const address =
+      focused.address.kind === "param"
+        ? focused.address
+        : focused.address.kind === "fn"
+          ? {
+              kind: "param" as const,
+              padId: focused.address.padId,
+              scope: focused.address.scope,
+              paramName: focused.address.paramName,
+            }
+          : null
+    if (!address) return
+    const paramControlId = controls.find(
+      (candidate) =>
+        candidate.address.kind === "param" &&
+        candidate.address.padId === address.padId &&
+        candidate.address.scope === address.scope &&
+        candidate.address.paramName === address.paramName
+    )?.id
+    if (paramControlId && state.focusedControlId !== paramControlId) {
+      get().setFocusedControl(paramControlId)
+    }
+    const pad = selectDetailPad(state)
+    if (!pad || pad.instanceId !== address.padId) return
+    const params = address.scope === "main" ? pad.params : pad.secondaryParams
+    const current = params?.[address.paramName] ?? focused.default
+    const next = typeof current === "number"
+      ? { kind: "fn" as const, shape: "sin" as const, freq: 1, amp: 0.5, offset: current }
+      : current.offset
+    if (address.scope === "main") {
+      get().updateParam(address.padId, address.paramName, next)
+    } else {
+      get().updateSecondaryParam(address.padId, address.paramName, next)
+    }
+  },
+
+  focusSourceControl: () => {
+    const source = selectControlList(get()).find((control) => control.address.kind === "source")
+    if (source) set({ focusZone: "params", focusedControlId: source.id })
+  },
+
+  toggleDetailBypass: () => {
+    const pad = selectDetailPad(get())
+    if (pad) get().toggleBypass(pad.instanceId)
+  },
+
+  cycleChainPad: (delta) => {
+    const state = get()
+    if (state.activePads.length === 0) return
+    const pads = [...state.activePads].sort((a, b) => a.activatedAt - b.activatedAt)
+    const currentIndex = pads.findIndex((pad) => pad.instanceId === selectDetailPad(state)?.instanceId)
+    const startIndex = currentIndex === -1 ? 0 : currentIndex
+    const nextIndex = (startIndex + delta + pads.length) % pads.length
+    set({ selectedSlotId: pads[nextIndex].instanceId, focusedControlId: null, sourceDraftId: null })
+  },
+
+  setSourceDraft: (sourceDraftId) => set({ sourceDraftId }),
+
+  applySourceDraft: () => {
+    const { sourceDraftId } = get()
+    const pad = selectDetailPad(get())
+    if (!sourceDraftId || !pad) return
+    get().updateSecondarySource(pad.instanceId, sourceDraftId)
+    set({ sourceDraftId: null })
+  },
+
+  setGlobalFader: (faderId, value) => {
+    set((state) => ({
+      globalFaders: { ...state.globalFaders, [faderId]: value },
+    }))
   },
 
   toggleSlot: (slotId) => {
@@ -380,6 +572,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
       armedSlotId: null,
       selectedSlotId: null,
       momentarySlotId: null,
+      focusedControlId: null,
+      sourceDraftId: null,
       ...syncEditingView(state.chains, buffer, null, state.gridView),
     }))
   },
@@ -527,6 +721,11 @@ export function selectDetailPad(state: ChainState): ActivePad | null {
     if (slot) return slot
   }
   return selectMostRecentActivePad(state)
+}
+
+/** Lista lineal de controles para navegación por teclado y futuros mensajes MIDI. */
+export function selectControlList(state: ChainState) {
+  return buildControlList(selectDetailPad(state), state.globalFaders, state.sourceDraftId)
 }
 
 export function selectIsPadActive(functionId: string) {

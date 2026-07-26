@@ -29,6 +29,7 @@ interface PadProps {
   onDisarm: () => void
   onMomentaryStart: () => void
   onMomentaryEnd: () => void
+  onApply: () => void
   onRemove?: () => void
 }
 
@@ -48,11 +49,13 @@ export function Pad({
   onDisarm,
   onMomentaryStart,
   onMomentaryEnd,
+  onApply,
   onRemove,
 }: PadProps) {
   const color = CATEGORY_COLORS[functionDef.category]
   const selectOnlyRef = useRef(false)
   const armRef = useRef(false)
+  const applyRef = useRef(false)
   const holdTimerRef = useRef<number | null>(null)
   const momentaryRef = useRef(false)
 
@@ -70,10 +73,12 @@ export function Pad({
     (e: React.PointerEvent) => {
       if (e.button !== 0) return
       e.currentTarget.setPointerCapture(e.pointerId)
-      selectOnlyRef.current = e.ctrlKey || e.altKey || e.metaKey
+      selectOnlyRef.current = e.altKey
       armRef.current = e.shiftKey
+      applyRef.current = e.ctrlKey || e.metaKey
 
       if (armRef.current) return
+      if (applyRef.current) return
       if (selectOnlyRef.current) return
       holdTimerRef.current = window.setTimeout(() => {
         holdTimerRef.current = null
@@ -97,6 +102,11 @@ export function Pad({
         armRef.current = false
         return
       }
+      if (applyRef.current) {
+        onApply()
+        applyRef.current = false
+        return
+      }
       if (selectOnlyRef.current) {
         onSelect()
         selectOnlyRef.current = false
@@ -109,7 +119,7 @@ export function Pad({
       }
       onToggle()
     },
-    [clearHoldTimer, onToggle, onMomentaryEnd, onSelect, onArm, onDisarm, isArmed, isActive]
+    [clearHoldTimer, onToggle, onMomentaryEnd, onSelect, onArm, onDisarm, onApply, isArmed, isActive]
   )
 
   const handlePointerLeave = useCallback(() => {
@@ -139,7 +149,7 @@ export function Pad({
   return (
     <motion.div
       className={cn(
-        "relative flex flex-col items-center justify-center gap-1 rounded-lg cursor-pointer select-none w-full h-full overflow-hidden",
+        "group relative flex flex-col items-center justify-center gap-1 rounded-lg cursor-pointer select-none w-full h-full overflow-hidden",
         "border transition-colors duration-150",
         "p-1.5",
         isActive && !isBypassed && "border-[var(--pad-color)] bg-[var(--pad-color)]/15",
@@ -180,14 +190,16 @@ export function Pad({
       }
       whileTap={{ scale: 0.94 }}
     >
-      <div
-        className={cn(
-          "absolute top-1 right-1 w-2 h-2 rounded-full transition-all duration-150",
-          isActive ? "opacity-100" : "opacity-20",
-          isActive && isBypassed && "opacity-40"
-        )}
-        style={{ backgroundColor: color }}
-      />
+      {!isExtra && (
+        <div
+          className={cn(
+            "absolute top-1 right-1 w-2 h-2 rounded-full transition-all duration-150",
+            isActive ? "opacity-100" : "opacity-20",
+            isActive && isBypassed && "opacity-40"
+          )}
+          style={{ backgroundColor: color }}
+        />
+      )}
 
       {chainPosition != null && (
         <span
@@ -208,7 +220,7 @@ export function Pad({
         <button
           type="button"
           onClick={handleRemove}
-          className="absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded flex items-center justify-center text-white/20 hover:text-red-400/70 hover:bg-red-500/10 transition-colors z-10"
+          className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded flex items-center justify-center text-white/20 opacity-0 group-hover:opacity-100 hover:text-red-400/70 hover:bg-red-500/10 transition-all z-10"
           title="Eliminar slot"
         >
           <X className="w-2 h-2" />
@@ -217,10 +229,7 @@ export function Pad({
 
       {keyHint && (
         <span
-          className={cn(
-            "absolute top-1 left-1 font-mono text-[8px] leading-none px-1 py-0.5 rounded border border-white/15 text-white/35 bg-black/35",
-            isExtra && "left-5"
-          )}
+          className="absolute top-1 left-1 font-mono text-[14px] font-bold leading-none px-1.5 py-1 rounded border border-white/25 text-white/80 bg-black/45"
         >
           {keyHint}
         </span>

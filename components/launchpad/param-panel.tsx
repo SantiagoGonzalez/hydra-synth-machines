@@ -4,7 +4,7 @@
 
 import { useChainStore, selectDetailPad } from "@/stores/chain-store"
 import { ChainChips } from "@/components/launchpad/chain-chips"
-import { PadParamPanel } from "@/components/launchpad/param-slider"
+import { PadParamPanel } from "@/components/launchpad/pad-param-panel"
 import { GlobalFaders } from "@/components/launchpad/global-faders"
 
 export function ParamPanel() {

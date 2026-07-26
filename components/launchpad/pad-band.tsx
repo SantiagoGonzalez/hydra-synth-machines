@@ -26,6 +26,16 @@ export function PadBand() {
   const setEditingOutput = useChainStore((s) => s.setEditingOutput)
   const armedSlotId = useChainStore((s) => s.armedSlotId)
   const selectedSlotId = useChainStore((s) => s.selectedSlotId)
+  const focusedControlId = useChainStore((s) => s.focusedControlId)
+  const sourceDraftId = useChainStore((s) => s.sourceDraftId)
+  const setFocusZone = useChainStore((s) => s.setFocusZone)
+  const moveFocusedControl = useChainStore((s) => s.moveFocusedControl)
+  const nudgeFocusedControl = useChainStore((s) => s.nudgeFocusedControl)
+  const cycleChainPad = useChainStore((s) => s.cycleChainPad)
+  const toggleFocusedParamMode = useChainStore((s) => s.toggleFocusedParamMode)
+  const focusSourceControl = useChainStore((s) => s.focusSourceControl)
+  const toggleDetailBypass = useChainStore((s) => s.toggleDetailBypass)
+  const applySourceDraft = useChainStore((s) => s.applySourceDraft)
 
   const [activeCategory, setActiveCategory] = useState<HydraCategory>("source")
   const [isAddPadOpen, setIsAddPadOpen] = useState(false)
@@ -70,6 +80,19 @@ export function PadBand() {
     if (selectedSlotId) removeSlot(selectedSlotId)
   }, [removeSlot, selectedSlotId])
 
+  const handleAddPadOpenChange = useCallback(
+    (open: boolean) => {
+      setIsAddPadOpen(open)
+      if (!open) {
+        setFocusZone("pads")
+        window.requestAnimationFrame(() => {
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+        })
+      }
+    },
+    [setFocusZone]
+  )
+
   useLaunchpadKeys({
     orderedSlots,
     onTabChange: handleCategoryChange,
@@ -81,8 +104,19 @@ export function PadBand() {
     onMomentaryStart: holdSlot,
     onMomentaryEnd: releaseSlot,
     onApplyArmed: applyArmedSlot,
+    onApplySourceDraft: applySourceDraft,
+    isSourceFocused: focusedControlId?.startsWith("source:") ?? false,
+    hasSourceDraft: sourceDraftId !== null,
     onDisarm: disarmSlot,
     onRemoveSelected: handleRemoveSelected,
+    onFocusParams: () => setFocusZone("params"),
+    onFocusPads: () => setFocusZone("pads"),
+    onMoveFocusedControl: moveFocusedControl,
+    onNudgeFocusedControl: nudgeFocusedControl,
+    onCycleChainPad: cycleChainPad,
+    onToggleFocusedParamMode: toggleFocusedParamMode,
+    onFocusSourceControl: focusSourceControl,
+    onToggleDetailBypass: toggleDetailBypass,
   })
 
   const handleRandomize = useCallback(() => {
@@ -136,10 +170,11 @@ export function PadBand() {
               onSelectSlot={handleSelectSlot}
               onArmSlot={armSlot}
               onDisarmSlot={disarmSlot}
+              onApplyArmed={applyArmedSlot}
               onRemoveSlot={removeSlot}
               onAddSlot={addSlot}
               isAddPadOpen={isAddPadOpen}
-              onAddPadOpenChange={setIsAddPadOpen}
+              onAddPadOpenChange={handleAddPadOpenChange}
               onMomentaryStart={holdSlot}
               onMomentaryEnd={releaseSlot}
             />

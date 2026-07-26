@@ -2,9 +2,10 @@
 
 // Selector de fuente secundaria con selección diferida: draft local + Apply/Cancel
 
-import { useState } from "react"
+import { useEffect, useRef } from "react"
 import { CATEGORY_COLORS, getSourceOptions, type HydraFunctionDef } from "@/lib/hydra-registry"
 import { cn } from "@/lib/utils"
+import { useChainStore } from "@/stores/chain-store"
 
 const SOURCE_COLOR = CATEGORY_COLORS["source"]
 
@@ -13,13 +14,15 @@ interface SourceSelectorProps {
   appliedSourceId?: string
   /** Confirma el draft: recién acá se recompila */
   onApply: (sourceId: string) => void
+  controlId: string
+  isFocusActive: boolean
 }
 
 interface SourceChipProps {
   option: HydraFunctionDef
   isApplied: boolean
   isDraft: boolean
-  onClick: () => void
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void
 }
 
 function SourceChip({ option, isApplied, isDraft, onClick }: SourceChipProps) {
@@ -53,14 +56,30 @@ function SourceChip({ option, isApplied, isDraft, onClick }: SourceChipProps) {
 }
 
 /** Grilla agrupada de fuentes (generadores vs buffers src:oN); montar con key={instanceId} para descartar el draft al cambiar de pad */
-export function SourceSelector({ appliedSourceId, onApply }: SourceSelectorProps) {
-  const [draftId, setDraftId] = useState<string | null>(null)
+export function SourceSelector({
+  appliedSourceId,
+  onApply,
+  controlId,
+  isFocusActive,
+}: SourceSelectorProps) {
+  const draftId = useChainStore((state) => state.sourceDraftId)
+  const setSourceDraft = useChainStore((state) => state.setSourceDraft)
+  const containerRef = useRef<HTMLDivElement>(null)
   const options = getSourceOptions()
   const generators = options.filter((o) => !o.id.startsWith("src:"))
   const buffers = options.filter((o) => o.id.startsWith("src:"))
 
-  const handlePick = (id: string) => {
-    setDraftId(id === appliedSourceId ? null : id)
+  useEffect(() => {
+    if (isFocusActive) containerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [isFocusActive])
+
+  const handlePick = (id: string, applyImmediately: boolean) => {
+    const nextDraftId = id === appliedSourceId ? null : id
+    setSourceDraft(nextDraftId)
+    if (applyImmediately && nextDraftId) {
+      onApply(nextDraftId)
+      setSourceDraft(null)
+    }
   }
 
   const renderGroup = (label: string, group: HydraFunctionDef[], cols: string) => (
@@ -73,7 +92,7 @@ export function SourceSelector({ appliedSourceId, onApply }: SourceSelectorProps
             option={src}
             isApplied={src.id === appliedSourceId}
             isDraft={src.id === draftId}
-            onClick={() => handlePick(src.id)}
+            onClick={(event) => handlePick(src.id, event.ctrlKey)}
           />
         ))}
       </div>
@@ -81,7 +100,14 @@ export function SourceSelector({ appliedSourceId, onApply }: SourceSelectorProps
   )
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      ref={containerRef}
+      data-control-id={controlId}
+      className={cn(
+        "flex flex-col gap-2 rounded transition-shadow",
+        isFocusActive && "ring-1 ring-inset ring-yellow-300/80"
+      )}
+    >
       {renderGroup("generators", generators, "grid-cols-3")}
       {renderGroup("buffers", buffers, "grid-cols-4")}
 
@@ -91,7 +117,7 @@ export function SourceSelector({ appliedSourceId, onApply }: SourceSelectorProps
             type="button"
             onClick={() => {
               onApply(draftId)
-              setDraftId(null)
+              setSourceDraft(null)
             }}
             className="flex-1 font-mono text-[10px] uppercase tracking-wider px-2 py-1.5 rounded bg-yellow-400/20 text-yellow-300 hover:bg-yellow-400/30 transition-colors"
           >
@@ -99,7 +125,7 @@ export function SourceSelector({ appliedSourceId, onApply }: SourceSelectorProps
           </button>
           <button
             type="button"
-            onClick={() => setDraftId(null)}
+            onClick={() => setSourceDraft(null)}
             className="font-mono text-[10px] uppercase tracking-wider px-2 py-1.5 rounded border border-white/10 text-white/40 hover:text-white/70 transition-colors"
           >
             Cancel

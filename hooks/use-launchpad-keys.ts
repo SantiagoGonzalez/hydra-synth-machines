@@ -4,7 +4,7 @@
 
 import { useEffect, useRef } from "react"
 import { CATEGORIES, type HydraCategory } from "@/lib/hydra-registry"
-import { cellIndexForCode } from "@/lib/pad-key-map"
+import { cellIndexForCode, PARAM_ACTION_KEY_MAP } from "@/lib/pad-key-map"
 import type { PadSlot } from "@/stores/chain-store"
 import type { OutputBuffer } from "@/lib/chain-compiler"
 
@@ -42,22 +42,32 @@ interface LaunchpadKeyOptions {
   onMomentaryStart: (slotId: string) => void
   onMomentaryEnd: (slotId: string) => void
   onApplyArmed: () => void
+  onApplySourceDraft: () => void
+  isSourceFocused: boolean
+  hasSourceDraft: boolean
   onDisarm: () => void
   onRemoveSelected: () => void
+  onFocusParams: () => void
+  onFocusPads: () => void
+  onMoveFocusedControl: (delta: number) => void
+  onNudgeFocusedControl: (fraction: number) => void
+  onCycleChainPad: (delta: number) => void
+  onToggleFocusedParamMode: () => void
+  onFocusSourceControl: () => void
+  onToggleDetailBypass: () => void
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   const tag = target.tagName
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true
+  if (tag === "INPUT") return (target as HTMLInputElement).type !== "range"
+  if (tag === "TEXTAREA" || tag === "SELECT") return true
   return target.isContentEditable
 }
 
-function isInteractiveTarget(target: EventTarget | null): boolean {
+function isButtonTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
-  return target.closest(
-    'button, a[href], [role="button"], [role="combobox"], [role="menuitem"], [tabindex]:not([tabindex="-1"])'
-  ) !== null
+  return target.closest('button, [role="button"]') !== null
 }
 
 function hasOpenOverlay(): boolean {
@@ -77,8 +87,19 @@ export function useLaunchpadKeys({
   onMomentaryStart,
   onMomentaryEnd,
   onApplyArmed,
+  onApplySourceDraft,
+  isSourceFocused,
+  hasSourceDraft,
   onDisarm,
   onRemoveSelected,
+  onFocusParams,
+  onFocusPads,
+  onMoveFocusedControl,
+  onNudgeFocusedControl,
+  onCycleChainPad,
+  onToggleFocusedParamMode,
+  onFocusSourceControl,
+  onToggleDetailBypass,
 }: LaunchpadKeyOptions) {
   const pendingPressesRef = useRef(new Map<string, PendingPress>())
   const optionsRef = useRef<LaunchpadKeyOptions>({
@@ -92,8 +113,19 @@ export function useLaunchpadKeys({
     onMomentaryStart,
     onMomentaryEnd,
     onApplyArmed,
+    onApplySourceDraft,
+    isSourceFocused,
+    hasSourceDraft,
     onDisarm,
     onRemoveSelected,
+    onFocusParams,
+    onFocusPads,
+    onMoveFocusedControl,
+    onNudgeFocusedControl,
+    onCycleChainPad,
+    onToggleFocusedParamMode,
+    onFocusSourceControl,
+    onToggleDetailBypass,
   })
   optionsRef.current = {
     orderedSlots,
@@ -106,8 +138,19 @@ export function useLaunchpadKeys({
     onMomentaryStart,
     onMomentaryEnd,
     onApplyArmed,
+    onApplySourceDraft,
+    isSourceFocused,
+    hasSourceDraft,
     onDisarm,
     onRemoveSelected,
+    onFocusParams,
+    onFocusPads,
+    onMoveFocusedControl,
+    onNudgeFocusedControl,
+    onCycleChainPad,
+    onToggleFocusedParamMode,
+    onFocusSourceControl,
+    onToggleDetailBypass,
   }
 
   useEffect(() => {
@@ -126,8 +169,9 @@ export function useLaunchpadKeys({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat || isEditableTarget(event.target) || isInteractiveTarget(event.target)) return
+      if (event.repeat || isEditableTarget(event.target)) return
       if (hasOpenOverlay()) return
+      const isButton = isButtonTarget(event.target)
 
       if (event.shiftKey) {
         const output = OUTPUT_KEY_MAP[event.code]
@@ -156,14 +200,20 @@ export function useLaunchpadKeys({
         }
 
         if (event.code === "Space") {
+          if (isButton) return
           event.preventDefault()
           optionsRef.current.onOpenAddPad()
           return
         }
 
         if (event.code === "Enter") {
+          if (isButton) return
           event.preventDefault()
-          optionsRef.current.onApplyArmed()
+          if (optionsRef.current.isSourceFocused && optionsRef.current.hasSourceDraft) {
+            optionsRef.current.onApplySourceDraft()
+          } else {
+            optionsRef.current.onApplyArmed()
+          }
           return
         }
 
@@ -172,6 +222,54 @@ export function useLaunchpadKeys({
           optionsRef.current.onDisarm()
           return
         }
+
+        if (event.code === "KeyP") {
+          event.preventDefault()
+          optionsRef.current.onFocusParams()
+          return
+        }
+
+        if (event.code === "KeyO") {
+          event.preventDefault()
+          optionsRef.current.onFocusPads()
+          return
+        }
+
+        const action = PARAM_ACTION_KEY_MAP[event.code as keyof typeof PARAM_ACTION_KEY_MAP]
+        if (action === "toggle-fn") {
+          event.preventDefault()
+          optionsRef.current.onToggleFocusedParamMode()
+          return
+        }
+        if (action === "focus-source") {
+          event.preventDefault()
+          optionsRef.current.onFocusSourceControl()
+          return
+        }
+        if (action === "toggle-bypass") {
+          event.preventDefault()
+          optionsRef.current.onToggleDetailBypass()
+          return
+        }
+      }
+
+      if (event.code === "ArrowUp" || event.code === "ArrowDown") {
+        if (event.ctrlKey || event.metaKey || event.altKey) return
+        event.preventDefault()
+        optionsRef.current.onMoveFocusedControl(event.code === "ArrowUp" ? -1 : 1)
+        return
+      }
+
+      if (event.code === "ArrowLeft" || event.code === "ArrowRight") {
+        if (event.metaKey || event.altKey) return
+        event.preventDefault()
+        const direction = event.code === "ArrowLeft" ? -1 : 1
+        if (event.ctrlKey) {
+          optionsRef.current.onCycleChainPad(direction)
+        } else {
+          optionsRef.current.onNudgeFocusedControl(direction * (event.shiftKey ? 0.1 : 0.01))
+        }
+        return
       }
 
       const cellIndex = cellIndexForCode(event.code)

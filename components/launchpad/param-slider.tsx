@@ -2,14 +2,9 @@
 
 // Panel de controles de parámetros para un pad activo, con sliders escalar/fn por parámetro
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
-import {
-  CATEGORY_COLORS,
-  getFunctionDef,
-  type HydraParam,
-} from "@/lib/hydra-registry"
-import { SourceSelector } from "@/components/launchpad/source-selector"
+import { type HydraParam } from "@/lib/hydra-registry"
 import {
   isParamFn,
   scalarPreview,
@@ -17,23 +12,44 @@ import {
   type ParamValue,
   type FnShape,
 } from "@/lib/param-value"
-import { useChainStore, type ActivePad } from "@/stores/chain-store"
+import { FN_FIELD_RANGES } from "@/lib/launchpad-controls"
 import { cn } from "@/lib/utils"
 
 interface ParamSliderProps {
   param: HydraParam
   value: ParamValue
   color: string
+  controlId: string
+  fnControlIds: Record<"freq" | "amp" | "offset", string>
+  isFocusActive: boolean
+  focusedControlId: string | null
   onChange: (value: ParamValue) => void
 }
 
 const FN_SHAPES: FnShape[] = ["sin", "cos", "tan", "linear"]
 
-function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) {
+export function SingleParamSlider({
+  param,
+  value,
+  color,
+  controlId,
+  fnControlIds,
+  isFocusActive,
+  focusedControlId,
+  onChange,
+}: ParamSliderProps) {
   const rafRef = useRef<number | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState<string | null>(null)
   const isFn = isParamFn(value)
   const scalarVal = scalarPreview(value, param.default)
+  const isFocused =
+    isFocusActive &&
+    (focusedControlId === controlId || Object.values(fnControlIds).includes(focusedControlId ?? ""))
+
+  useEffect(() => {
+    if (isFocused) containerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [isFocused])
 
   const handleScalarChange = useCallback(
     ([newVal]: number[]) => {
@@ -75,7 +91,14 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
   }, [draft, onChange, param.max, param.min, isFn])
 
   return (
-    <div className="flex flex-col gap-1 w-full">
+    <div
+      ref={containerRef}
+      data-control-id={controlId}
+      className={cn(
+        "flex flex-col gap-1 w-full rounded transition-shadow",
+        isFocusActive && focusedControlId === controlId && "ring-1 ring-inset ring-yellow-300/80"
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-[9px] text-white/40 uppercase tracking-wider truncate">
           {param.name}
@@ -134,7 +157,16 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
             ))}
           </div>
           {(["freq", "amp", "offset"] as const).map((field) => (
-            <div key={field} className="flex flex-col gap-0.5">
+            <div
+              key={field}
+              data-control-id={fnControlIds[field]}
+              className={cn(
+                "flex flex-col gap-0.5 rounded transition-shadow",
+                isFocusActive &&
+                  focusedControlId === fnControlIds[field] &&
+                  "ring-1 ring-inset ring-yellow-300/80"
+              )}
+            >
               <div className="flex justify-between">
                 <span className="font-mono text-[7px] text-white/25 uppercase">{field}</span>
                 <span className="font-mono text-[7px] text-white/40 tabular-nums">
@@ -143,9 +175,9 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
               </div>
               <SliderPrimitive.Root
                 className="relative flex w-full touch-none select-none items-center h-3"
-                min={field === "freq" ? 0.01 : field === "amp" ? -5 : -5}
-                max={field === "freq" ? 10 : field === "amp" ? 5 : 5}
-                step={field === "freq" ? 0.01 : 0.05}
+                min={FN_FIELD_RANGES[field].min}
+                max={FN_FIELD_RANGES[field].max}
+                step={FN_FIELD_RANGES[field].step}
                 value={[value[field]]}
                 onValueChange={([v]) => handleFnFieldChange(field, v)}
               >
@@ -188,119 +220,6 @@ function SingleParamSlider({ param, value, color, onChange }: ParamSliderProps) 
             style={{ backgroundColor: color }}
           />
         </SliderPrimitive.Root>
-      )}
-    </div>
-  )
-}
-
-interface PadParamPanelProps {
-  pad: ActivePad
-  isArmed?: boolean
-}
-
-/** Panel de parámetros para un pad concreto (activo, seleccionado o armado) */
-export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
-  const updateParam = useChainStore((s) => s.updateParam)
-  const updateSecondarySource = useChainStore((s) => s.updateSecondarySource)
-  const updateSecondaryParam = useChainStore((s) => s.updateSecondaryParam)
-  const toggleBypass = useChainStore((s) => s.toggleBypass)
-  const padSlots = useChainStore((s) => s.padSlots)
-  const def = getFunctionDef(pad.functionId)
-
-  if (!def) return null
-
-  const isActiveSlot = padSlots.some((s) => s.instanceId === pad.instanceId && s.isActive)
-
-  const activeOfSameType = padSlots.filter((s) => s.functionId === pad.functionId && s.isActive)
-  const instanceIndex = activeOfSameType.findIndex((s) => s.instanceId === pad.instanceId)
-  const instanceLabel =
-    activeOfSameType.length > 1 && instanceIndex >= 0 ? ` #${instanceIndex + 1}` : ""
-
-  const hasMainParams = def.params.length > 0
-  const hasSecondary = !!def.secondarySourceId
-  const selectedSourceId = pad.secondarySourceId ?? def.secondarySourceId
-
-  if (!hasMainParams && !hasSecondary) {
-    return (
-      <div className="flex items-center justify-center h-12 text-white/20 font-mono text-[10px]">
-        no params
-      </div>
-    )
-  }
-
-  const mainColor = CATEGORY_COLORS[pad.category]
-  const sourceColor = CATEGORY_COLORS["source"]
-  const selectedSecDef = selectedSourceId ? getFunctionDef(selectedSourceId) : undefined
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className={cn(
-            "font-mono text-[10px] font-semibold",
-            isArmed && "text-yellow-400/90",
-            pad.isBypassed && "line-through opacity-50"
-          )}
-          style={!isArmed ? { color: mainColor } : undefined}
-        >
-          {def.label}{instanceLabel}
-        </span>
-        {isActiveSlot && (
-          <button
-            type="button"
-            onClick={() => toggleBypass(pad.instanceId)}
-            className={cn(
-              "font-mono text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider transition-colors shrink-0",
-              pad.isBypassed
-                ? "border-amber-400/50 text-amber-300 bg-amber-400/10"
-                : "border-white/10 text-white/25 hover:text-white/50"
-            )}
-            title={pad.isBypassed ? "Re-enable pad in chain" : "Bypass pad (keeps position and params)"}
-          >
-            {pad.isBypassed ? "bypassed" : "bypass"}
-          </button>
-        )}
-      </div>
-
-      {hasMainParams && (
-        <div className="flex flex-col gap-3">
-          {def.params.map((param) => (
-            <SingleParamSlider
-              key={param.name}
-              param={param}
-              value={pad.params[param.name] ?? param.default}
-              color={mainColor}
-              onChange={(val) => updateParam(pad.instanceId, param.name, val)}
-            />
-          ))}
-        </div>
-      )}
-
-      {hasSecondary && (
-        <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
-          <span className="font-mono text-[9px] text-white/30 uppercase tracking-wider">
-            source
-          </span>
-          <SourceSelector
-            key={pad.instanceId}
-            appliedSourceId={selectedSourceId}
-            onApply={(sourceId) => updateSecondarySource(pad.instanceId, sourceId)}
-          />
-
-          {selectedSecDef && selectedSecDef.params.length > 0 && (
-            <div className="flex flex-col gap-3 mt-1">
-              {selectedSecDef.params.map((param) => (
-                <SingleParamSlider
-                  key={param.name}
-                  param={param}
-                  value={pad.secondaryParams?.[param.name] ?? param.default}
-                  color={`${sourceColor}99`}
-                  onChange={(val) => updateSecondaryParam(pad.instanceId, param.name, val)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
       )}
     </div>
   )

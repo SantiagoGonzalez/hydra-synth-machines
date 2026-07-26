@@ -2,37 +2,33 @@
 
 // Faders globales del launchpad (UI local, sin cablear al compilador aún)
 
-import { useState } from "react"
-
-const GLOBAL_FADERS = [
-  { id: "speed", label: "SPEED", min: 0, max: 3, step: 0.05, default: 1 },
-  { id: "brightness", label: "BRIGHT", min: -1, max: 1, step: 0.01, default: 0 },
-  { id: "decay", label: "DECAY", min: 0, max: 1, step: 0.01, default: 0 },
-  { id: "amount", label: "AMOUNT", min: 0, max: 1, step: 0.01, default: 0.5 },
-] as const
-
-type GlobalFaderId = (typeof GLOBAL_FADERS)[number]["id"]
-
-interface GlobalFaderConfig {
-  id: string
-  label: string
-  min: number
-  max: number
-  step: number
-  default: number
-}
+import { useEffect, useRef } from "react"
+import { GLOBAL_FADERS } from "@/lib/global-faders"
+import { controlId } from "@/lib/launchpad-controls"
+import { useChainStore } from "@/stores/chain-store"
 
 interface GlobalFaderProps {
-  fader: GlobalFaderConfig
+  fader: (typeof GLOBAL_FADERS)[number]
   value: number
   onChange: (value: number) => void
+  controlId: string
+  isFocusActive: boolean
 }
 
-function GlobalFader({ fader, value, onChange }: GlobalFaderProps) {
+function GlobalFader({ fader, value, onChange, controlId: id, isFocusActive }: GlobalFaderProps) {
   const pct = ((value - fader.min) / (fader.max - fader.min)) * 100
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isFocusActive) containerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [isFocusActive])
 
   return (
-    <div className="flex flex-col gap-1">
+    <div
+      ref={containerRef}
+      data-control-id={id}
+      className={`flex flex-col gap-1 rounded transition-shadow ${isFocusActive ? "ring-1 ring-inset ring-yellow-300/80" : ""}`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-[8px] text-white/25 uppercase tracking-wider shrink-0">
           {fader.label}
@@ -61,12 +57,10 @@ function GlobalFader({ fader, value, onChange }: GlobalFaderProps) {
 }
 
 export function GlobalFaders() {
-  const [globalFaders, setGlobalFaders] = useState<Record<GlobalFaderId, number>>(
-    Object.fromEntries(GLOBAL_FADERS.map((f) => [f.id, f.default])) as Record<
-      GlobalFaderId,
-      number
-    >
-  )
+  const globalFaders = useChainStore((state) => state.globalFaders)
+  const setGlobalFader = useChainStore((state) => state.setGlobalFader)
+  const focusZone = useChainStore((state) => state.focusZone)
+  const focusedControlId = useChainStore((state) => state.focusedControlId)
 
   return (
     <div className="flex flex-col gap-2 pt-3 border-t border-white/5">
@@ -77,7 +71,12 @@ export function GlobalFaders() {
             key={fader.id}
             fader={fader}
             value={globalFaders[fader.id]}
-            onChange={(val) => setGlobalFaders((prev) => ({ ...prev, [fader.id]: val }))}
+            onChange={(value) => setGlobalFader(fader.id, value)}
+            controlId={controlId({ kind: "global", faderId: fader.id })}
+            isFocusActive={
+              focusZone === "params" &&
+              focusedControlId === controlId({ kind: "global", faderId: fader.id })
+            }
           />
         ))}
       </div>

@@ -15,15 +15,15 @@ export const POSITIONAL_KEY_CODES = [
   "KeyH",
   "KeyJ",
   "KeyK",
-  "KeyZ",
-  "KeyX",
-  "KeyC",
-  "KeyV",
-  "KeyB",
-  "KeyN",
-  "KeyM",
-  "Comma",
 ] as const
+
+export const PARAM_ACTION_KEY_MAP = {
+  KeyZ: "toggle-fn",
+  KeyX: "focus-source",
+  KeyB: "toggle-bypass",
+} as const
+
+export type ParamAction = (typeof PARAM_ACTION_KEY_MAP)[keyof typeof PARAM_ACTION_KEY_MAP]
 
 export function cellIndexForCode(code: string): number | undefined {
   const index = POSITIONAL_KEY_CODES.indexOf(code as (typeof POSITIONAL_KEY_CODES)[number])
@@ -33,5 +33,5 @@ export function cellIndexForCode(code: string): number | undefined {
 export function keyLabelForIndex(index: number): string | undefined {
   const code = POSITIONAL_KEY_CODES[index]
   if (!code) return undefined
-  return code === "Comma" ? "," : code.replace("Key", "")
+  return code.replace("Key", "")
 }
