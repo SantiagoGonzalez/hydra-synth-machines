@@ -21,6 +21,8 @@ interface PadGridProps {
   category: HydraCategory
   onToggleSlot: (slotId: string) => void
   onSelectSlot: (slotId: string) => void
+  onArmSlot: (slotId: string) => void
+  onDisarmSlot: () => void
   onRemoveSlot: (slotId: string) => void
   onAddSlot: (functionId: string) => void
   onModeChange: (slotId: string, mode: "toggle" | "momentary") => void
@@ -32,6 +34,8 @@ export function PadGrid({
   category,
   onToggleSlot,
   onSelectSlot,
+  onArmSlot,
+  onDisarmSlot,
   onRemoveSlot,
   onAddSlot,
   onModeChange,
@@ -40,17 +44,36 @@ export function PadGrid({
 }: PadGridProps) {
   const padSlots = useChainStore((s) => s.padSlots)
   const selectedSlotId = useChainStore((s) => s.selectedSlotId)
+  const armedSlotId = useChainStore((s) => s.armedSlotId)
+  const activePads = useChainStore((s) => s.activePads)
+
+  // Memoizado localmente: un selector Zustand que retorne un Map nuevo en cada
+  // llamada rompe useSyncExternalStore (getSnapshot inestable) y causa loop infinito
+  const chainPositions = useMemo(() => {
+    const map = new Map<string, number>()
+    ;[...activePads]
+      .sort((a, b) => a.activatedAt - b.activatedAt)
+      .forEach((pad, i) => map.set(pad.instanceId, i + 1))
+    return map
+  }, [activePads])
 
   const categoryFunctions = useMemo(() => getRegistryByCategory(category), [category])
 
   const orderedSlots = useMemo(() => {
     const slotsInCategory = padSlots.filter((s) => s.category === category)
-    const result: PadSlot[] = []
+    const baseSlots: PadSlot[] = []
+    const extraSlots: PadSlot[] = []
+
     for (const fn of categoryFunctions) {
-      const fnSlots = slotsInCategory.filter((s) => s.functionId === fn.id)
-      result.push(...fnSlots)
+      const fnSlots = slotsInCategory.filter((s) => s.functionId === fn.id && !s.isExtra)
+      baseSlots.push(...fnSlots)
     }
-    return result
+
+    for (const slot of slotsInCategory) {
+      if (slot.isExtra) extraSlots.push(slot)
+    }
+
+    return [...baseSlots, ...extraSlots]
   }, [padSlots, category, categoryFunctions])
 
   const getSlotLabel = useCallback(
@@ -86,11 +109,15 @@ export function PadGrid({
               functionDef={fn}
               isActive={slot.isActive}
               isSelected={selectedSlotId === slot.instanceId}
+              isArmed={armedSlotId === slot.instanceId}
+              chainPosition={slot.isActive ? chainPositions.get(slot.instanceId) : undefined}
               mode={slot.mode}
               slotLabel={getSlotLabel(slot)}
               isExtra={slot.isExtra}
               onToggle={() => onToggleSlot(slot.instanceId)}
               onSelect={() => onSelectSlot(slot.instanceId)}
+              onArm={() => onArmSlot(slot.instanceId)}
+              onDisarm={onDisarmSlot}
               onMomentaryStart={() => onMomentaryStart(slot.instanceId)}
               onMomentaryEnd={() => onMomentaryEnd(slot.instanceId)}
               onModeChange={(m) => onModeChange(slot.instanceId, m)}

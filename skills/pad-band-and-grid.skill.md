@@ -43,16 +43,15 @@ PadBand (section, flex-col, min-h-0)
 ### Pad Grid (`pad-grid.tsx`)
 
 **Orden de slots** (estable para futuro mapeo QWERTYUI / ASDFGHJK):
-1. Para cada función en `getRegistryByCategory(category)` (orden del registro): slots base (`!isExtra`)
-2. Append todos los slots `isExtra` al **final de la grilla** en orden de creación
-3. Celda `AddPad` después del último slot
-4. Placeholders tenues hasta `max(16, slots + 1)` celdas
+1. Para cada función en `getRegistryByCategory(category)` (orden del registro)
+2. Append slots base (`!isExtra`) de ese `functionId`
+3. **Al final de la grilla:** todos los slots `isExtra` en orden de inserción (`padSlots` preserva orden)
+4. Celda `AddPad` después del último slot
+5. Placeholders tenues hasta `max(16, slots + 1)` celdas
 
-> **Invariante:** posición de celda estable = ancla del futuro mapeo de teclado posicional.
+> **Invariante:** posición de celda estable = ancla del futuro mapeo de teclado posicional. Los extras no se agrupan bajo su función; van al final.
 
-**Badge de posición en cadena:**
-- Solo pads activos muestran número 1..N (esquina inferior derecha)
-- El `#N` de instancia (misma función) permanece abajo-izquierda / categoría
+> **Extensión futura:** reordenado manual de la cadena (drag o botones ↑/↓ en `ChainChips`).
 
 **Sizing** (no cuadrado):
 ```tsx
@@ -75,8 +74,9 @@ const rowCount = Math.ceil(totalCells / GRID_COLS)
 | Gesto | Efecto |
 |-------|--------|
 | Click (toggle mode) | `toggleSlot` + `selectSlot` |
-| Shift+click (inactivo) | `armSlot` — staging sin activar |
 | Ctrl/Alt+click | solo `selectSlot` |
+| Shift+click (inactivo) | `armSlot` — staging preview en canvas |
+| Shift+click (armado) | `disarmSlot` |
 | Right-click | solo `selectSlot` (`preventDefault`) |
 | Pointer down (momentary) | `onMomentaryStart` + select |
 | Pointer up (momentary) | `onMomentaryEnd` |
@@ -84,6 +84,8 @@ const rowCount = Math.ceil(totalCells / GRID_COLS)
 **Visual:**
 - Activo: borde color categoría + glow **inset** (`boxShadow` animado)
 - Seleccionado: `ring-2 ring-inset ring-white/60`
+- Armado: borde punteado amarillo + pulso inset
+- `chainPosition`: badge numérico en esquina inferior derecha (solo activos); opuesto al `#N` en inferior izquierda
 - `overflow-hidden` en el pad para contener animaciones
 
 ### Slot Labels
@@ -121,12 +123,8 @@ return slotsForFn.length > 1 ? `#${index + 1}` : ""
 **Agregar slot extra:**
 1. Usuario abre AddPad → elige función
 2. `addSlot(functionId)` → `isExtra: true`, `isActive: false`
-3. Slot aparece al **final de la grilla** (después de todos los slots base), no agrupado por función
+3. Slot aparece **al final de la grilla** (no bajo su grupo de función)
 4. Si total celdas > 16, crece a 3ª+ fila
-
-**Extensión futura — reorden manual de cadena:**
-- Drag o botones ↑/↓ en `ChainChips` para cambiar `activatedAt` / índice en cadena
-- Documentado; no implementado aún
 
 **Ajustar altura de pads:**
 - Modificar `MIN_ROW_PX` o proporción `grid-rows-[2fr_1fr]` en page

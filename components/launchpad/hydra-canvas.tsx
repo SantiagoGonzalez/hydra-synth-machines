@@ -3,10 +3,11 @@
 // Canvas WebGL aislado para el launchpad: inicializa hydra-synth y reevalúa la cadena compilada
 
 import { useRef, useEffect, useState, useCallback } from "react"
-import { Maximize2, AlertCircle, Heart } from "lucide-react"
-import { useChainStore } from "@/stores/chain-store"
+import { Maximize2, AlertCircle, Heart, LayoutGrid } from "lucide-react"
+import { useChainStore, selectEffectiveCode, selectAllChainsSnapshot, type OutputBuffer } from "@/stores/chain-store"
 import { useFavoritesStore } from "@/stores/favorites-store"
 import { createHydraEvaluator, type HydraEvaluator } from "@/lib/chain-evaluator"
+import { OUTPUT_BUFFERS } from "@/lib/chain-compiler"
 import { cn } from "@/lib/utils"
 
 export function HydraCanvas() {
@@ -21,13 +22,18 @@ export function HydraCanvas() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
 
+  const effectiveCode = useChainStore(selectEffectiveCode)
   const compiledCode = useChainStore((s) => s.compiledCode)
+  const previewCode = useChainStore((s) => s.previewCode)
   const activePads = useChainStore((s) => s.activePads)
+  const editingOutput = useChainStore((s) => s.editingOutput)
+  const gridView = useChainStore((s) => s.gridView)
+  const setEditingOutput = useChainStore((s) => s.setEditingOutput)
+  const setGridView = useChainStore((s) => s.setGridView)
   const markSafeCode = useChainStore((s) => s.markSafeCode)
   const lastSafeCode = useChainStore((s) => s.lastSafeCode)
   const saveFavorite = useFavoritesStore((s) => s.saveFavorite)
 
-  // Inicialización del engine hydra-synth
   useEffect(() => {
     if (!canvasRef.current) return
 
@@ -45,8 +51,6 @@ export function HydraCanvas() {
       evaluator = ev
       evaluatorRef.current = ev
       setIsReady(true)
-
-      // Render inicial seguro
       ev.run("solid(0,0,0).out()", true)
     })
 
@@ -56,39 +60,40 @@ export function HydraCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Reevalúa cuando el código compilado cambia
   useEffect(() => {
     if (!isReady || !evaluatorRef.current) return
 
     const padCount = activePads.length
-    // Cambio estructural = se añadió o quitó un pad (no solo ajuste de parámetros)
-    const isStructural = padCount !== prevPadCountRef.current
+    const isStructural =
+      padCount !== prevPadCountRef.current ||
+      effectiveCode.includes("render(") !== prevCodeRef.current.includes("render(")
 
-    evaluatorRef.current.run(compiledCode, isStructural)
+    evaluatorRef.current.run(effectiveCode, isStructural)
 
     if (isStructural) {
       setIsFlashing(true)
       setTimeout(() => setIsFlashing(false), 200)
     }
 
-    prevCodeRef.current = compiledCode
+    prevCodeRef.current = effectiveCode
     prevPadCountRef.current = padCount
-  }, [compiledCode, isReady, activePads.length])
+  }, [effectiveCode, isReady, activePads.length])
 
   const handleDismissError = useCallback(() => {
     setError(null)
-    // Revert to last safe state
     evaluatorRef.current?.run(lastSafeCode, true)
   }, [lastSafeCode])
 
-  // Captura el canvas como imagen y guarda la cadena actual en favoritos
   const handleSaveToFavorites = useCallback(() => {
     if (!canvasRef.current) return
     const thumbnailDataUrl = canvasRef.current.toDataURL("image/webp", 0.6)
-    saveFavorite({ activePads, compiledCode, thumbnailDataUrl })
+    // Snapshot leído on-demand (no suscripto al render): evita recrear un objeto
+    // nuevo en cada render, que rompería useSyncExternalStore con loop infinito
+    const allChains = selectAllChainsSnapshot(useChainStore.getState())
+    saveFavorite({ chains: allChains, compiledCode, thumbnailDataUrl })
     setIsSaved(true)
     setTimeout(() => setIsSaved(false), 1500)
-  }, [activePads, compiledCode, saveFavorite])
+  }, [compiledCode, saveFavorite])
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -113,7 +118,6 @@ export function HydraCanvas() {
         "w-full h-auto max-h-full aspect-video"
       )}
     >
-      {/* Glow border */}
       <div
         className={cn(
           "absolute -inset-[1px] rounded-xl transition-opacity duration-500 pointer-events-none z-0",
@@ -122,7 +126,6 @@ export function HydraCanvas() {
         )}
       />
 
-      {/* Flash overlay on structural change */}
       {isFlashing && (
         <div className="absolute inset-0 bg-white/5 pointer-events-none z-10 animate-ping" />
       )}
@@ -132,7 +135,6 @@ export function HydraCanvas() {
         className="relative z-1 w-full h-full bg-black block"
       />
 
-      {/* Sticky + Fullscreen buttons */}
       <div className={cn(
         "absolute top-2 right-2 z-20 flex gap-1",
         "opacity-0 group-hover:opacity-100 transition-opacity"
@@ -160,10 +162,39 @@ export function HydraCanvas() {
         </button>
       </div>
 
-      {/* Status bar */}
       <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-between px-3 py-1.5 bg-black/60 backdrop-blur-sm">
-        <span className="font-mono text-[9px] text-white/30">Hydra Output(o0)</span>
+        <div className="flex items-center gap-1">
+          {OUTPUT_BUFFERS.map((buf) => (
+            <button
+              key={buf}
+              type="button"
+              onClick={() => setEditingOutput(buf as OutputBuffer)}
+              className={cn(
+                "font-mono text-[8px] px-1.5 py-0.5 rounded transition-colors uppercase",
+                editingOutput === buf
+                  ? "bg-white/15 text-white/70"
+                  : "text-white/25 hover:text-white/50"
+              )}
+            >
+              {buf}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setGridView(!gridView)}
+            className={cn(
+              "p-0.5 ml-1 rounded transition-colors",
+              gridView ? "text-green-400/80" : "text-white/25 hover:text-white/50"
+            )}
+            title="Toggle 2×2 grid view"
+          >
+            <LayoutGrid className="w-3 h-3" />
+          </button>
+        </div>
         <div className="flex items-center gap-1.5">
+          {previewCode && (
+            <span className="font-mono text-[8px] text-yellow-400/70 uppercase">preview</span>
+          )}
           {isReady ? (
             <div className="w-1.5 h-1.5 rounded-full bg-green-400/60" />
           ) : (
@@ -175,7 +206,6 @@ export function HydraCanvas() {
         </div>
       </div>
 
-      {/* Error overlay */}
       {error && (
         <div
           className="absolute inset-0 z-30 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"

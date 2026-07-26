@@ -12,13 +12,16 @@ interface PadProps {
   functionDef: HydraFunctionDef
   isActive: boolean
   isSelected?: boolean
+  isArmed?: boolean
+  /** Posición en cadena (1-based), esquina opuesta al #N */
+  chainPosition?: number
   mode: "toggle" | "momentary"
-  /** Etiqueta de instancia, ej. "#2" para diferenciar slots del mismo tipo */
   slotLabel?: string
-  /** Si true, muestra botón X para eliminar el slot */
   isExtra?: boolean
   onToggle: () => void
   onSelect: () => void
+  onArm: () => void
+  onDisarm: () => void
   onMomentaryStart: () => void
   onMomentaryEnd: () => void
   onModeChange: (mode: "toggle" | "momentary") => void
@@ -29,11 +32,15 @@ export function Pad({
   functionDef,
   isActive,
   isSelected = false,
+  isArmed = false,
+  chainPosition,
   mode,
   slotLabel,
   isExtra,
   onToggle,
   onSelect,
+  onArm,
+  onDisarm,
   onMomentaryStart,
   onMomentaryEnd,
   onModeChange,
@@ -41,11 +48,15 @@ export function Pad({
 }: PadProps) {
   const color = CATEGORY_COLORS[functionDef.category]
   const selectOnlyRef = useRef(false)
+  const armRef = useRef(false)
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       e.currentTarget.setPointerCapture(e.pointerId)
       selectOnlyRef.current = e.ctrlKey || e.altKey || e.metaKey
+      armRef.current = e.shiftKey
+
+      if (armRef.current) return
       if (selectOnlyRef.current) return
       if (mode === "momentary") {
         onMomentaryStart()
@@ -55,6 +66,15 @@ export function Pad({
   )
 
   const handlePointerUp = useCallback(() => {
+    if (armRef.current) {
+      if (isArmed) {
+        onDisarm()
+      } else if (!isActive) {
+        onArm()
+      }
+      armRef.current = false
+      return
+    }
     if (selectOnlyRef.current) {
       onSelect()
       selectOnlyRef.current = false
@@ -65,10 +85,10 @@ export function Pad({
     } else {
       onToggle()
     }
-  }, [mode, onToggle, onMomentaryEnd, onSelect])
+  }, [mode, onToggle, onMomentaryEnd, onSelect, onArm, onDisarm, isArmed, isActive])
 
   const handlePointerLeave = useCallback(() => {
-    if (selectOnlyRef.current) return
+    if (selectOnlyRef.current || armRef.current) return
     if (mode === "momentary" && isActive) {
       onMomentaryEnd()
     }
@@ -107,7 +127,8 @@ export function Pad({
         isActive
           ? "border-[var(--pad-color)] bg-[var(--pad-color)]/15"
           : "border-white/10 bg-black/40 hover:border-white/20 hover:bg-white/5",
-        isSelected && "ring-2 ring-inset ring-white/60"
+        isSelected && "ring-2 ring-inset ring-white/60",
+        isArmed && "border-dashed border-yellow-400/60"
       )}
       style={{ "--pad-color": color } as React.CSSProperties}
       onPointerDown={handlePointerDown}
@@ -115,18 +136,26 @@ export function Pad({
       onPointerLeave={handlePointerLeave}
       onContextMenu={handleContextMenu}
       animate={
-        isActive
+        isArmed
           ? {
               boxShadow: [
-                `inset 0 0 8px ${color}55`,
-                `inset 0 0 18px ${color}88`,
-                `inset 0 0 8px ${color}55`,
+                "inset 0 0 6px rgba(250,204,21,0.3)",
+                "inset 0 0 14px rgba(250,204,21,0.5)",
+                "inset 0 0 6px rgba(250,204,21,0.3)",
               ],
             }
-          : { boxShadow: "inset 0 0 0px transparent" }
+          : isActive
+            ? {
+                boxShadow: [
+                  `inset 0 0 8px ${color}55`,
+                  `inset 0 0 18px ${color}88`,
+                  `inset 0 0 8px ${color}55`,
+                ],
+              }
+            : { boxShadow: "inset 0 0 0px transparent" }
       }
       transition={
-        isActive
+        isActive || isArmed
           ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
           : { duration: 0.2 }
       }
@@ -139,6 +168,12 @@ export function Pad({
         )}
         style={{ backgroundColor: color }}
       />
+
+      {chainPosition != null && (
+        <span className="absolute bottom-0.5 right-1 font-mono text-[7px] text-white/40 tabular-nums">
+          {chainPosition}
+        </span>
+      )}
 
       {isExtra && (
         <button

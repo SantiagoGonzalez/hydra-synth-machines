@@ -1,5 +1,7 @@
 // Registro centralizado de funciones Hydra con sus definiciones tipadas y rangos de parámetros
 
+import type { ParamValue } from "@/lib/param-value"
+
 export type HydraCategory = "source" | "geometry" | "color" | "blend" | "modulate"
 
 export interface HydraParam {
@@ -395,9 +397,20 @@ export function getFunctionDef(id: string): HydraFunctionDef | undefined {
   return HYDRA_REGISTRY.find((fn) => fn.id === id)
 }
 
-/** Retorna todas las funciones fuente disponibles como opciones para fuente secundaria */
+const BUFFER_SOURCE_IDS = ["o0", "o1", "o2", "o3"] as const
+
+/** Pseudo-definiciones para src(o0..o3) como fuente secundaria cross-buffer */
+const BUFFER_SOURCE_DEFS: HydraFunctionDef[] = BUFFER_SOURCE_IDS.map((buf) => ({
+  id: `src:${buf}`,
+  label: `src(${buf})`,
+  category: "source" as const,
+  params: [],
+  description: `Read buffer ${buf}`,
+}))
+
+/** Retorna fuentes del registro + src(o0..o3) para modulación entre outputs */
 export function getSourceOptions(): HydraFunctionDef[] {
-  return HYDRA_REGISTRY.filter((fn) => fn.category === "source")
+  return [...HYDRA_REGISTRY.filter((fn) => fn.category === "source"), ...BUFFER_SOURCE_DEFS]
 }
 
 /** Retorna todas las funciones de una categoría dada */
@@ -406,7 +419,7 @@ export function getRegistryByCategory(cat: HydraCategory): HydraFunctionDef[] {
 }
 
 /** Obtiene los valores por defecto de los parámetros de una función */
-export function getDefaultParams(def: HydraFunctionDef): Record<string, number> {
+export function getDefaultParams(def: HydraFunctionDef): Record<string, ParamValue> {
   return Object.fromEntries(def.params.map((p) => [p.name, p.default]))
 }
 

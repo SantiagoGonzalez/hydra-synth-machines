@@ -116,24 +116,29 @@ export async function createHydraEvaluator(
     if (!_ready) return
 
     try {
-      // hush solo en cambios estructurales (nuevo pad activado/desactivado)
-      // no en ajustes de parámetros, para transiciones suaves
       if (structural) {
         synth.hush()
       }
 
       const bound = buildBoundFunctions(synth)
-      const evalFn = new Function(...Object.keys(bound), `return (${code})`)
-      const result = evalFn(...Object.values(bound))
+      const isMultiLine = code.includes("\n") || code.includes("render(")
 
-      if (result && typeof result.out === "function") {
-        result.out()
+      if (isMultiLine) {
+        const evalFn = new Function(...Object.keys(bound), code)
+        evalFn(...Object.values(bound))
+      } else {
+        const evalFn = new Function(...Object.keys(bound), `return (${code})`)
+        const result = evalFn(...Object.values(bound))
+        if (result && typeof result.out === "function") {
+          result.out()
+        }
       }
 
       onSuccess?.()
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Invalid Hydra expression"
       console.error("[launchpad] Hydra eval error:", err)
-      onError?.(err.message ?? "Invalid Hydra expression")
+      onError?.(message)
     }
   }
 

@@ -2,10 +2,12 @@
 
 // Visualización en tiempo real del código Hydra compilado, con segmentos coloreados por categoría
 
-import { useMemo } from "react"
+import { useMemo, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useChainStore } from "@/stores/chain-store"
+import { Copy, Check } from "lucide-react"
+import { useChainStore, selectDetailPad } from "@/stores/chain-store"
 import { HYDRA_REGISTRY, CATEGORY_COLORS } from "@/lib/hydra-registry"
+import { ChainChips } from "@/components/launchpad/chain-chips"
 import { cn } from "@/lib/utils"
 
 interface CodeSegment {
@@ -16,7 +18,6 @@ interface CodeSegment {
 /** Tokeniza el código compilado e inyecta colores según si el token es un functionId conocido */
 function tokenize(code: string): CodeSegment[] {
   const segments: CodeSegment[] = []
-  // Divide por el patrón de llamada de función, preservando los separadores
   const parts = code.split(/(\b\w+(?=\())/g)
 
   for (const part of parts) {
@@ -34,10 +35,22 @@ function tokenize(code: string): CodeSegment[] {
 export function ChainPreview({ compact = false }: { compact?: boolean }) {
   const compiledCode = useChainStore((s) => s.compiledCode)
   const activePads = useChainStore((s) => s.activePads)
+  const selectSlot = useChainStore((s) => s.selectSlot)
+  const detailPad = useChainStore(selectDetailPad)
+  const [isCopied, setIsCopied] = useState(false)
 
   const segments = useMemo(() => tokenize(compiledCode), [compiledCode])
-
   const isEmpty = activePads.length === 0
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(compiledCode)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 1500)
+    } catch {
+      // clipboard no disponible
+    }
+  }, [compiledCode])
 
   return (
     <div
@@ -51,9 +64,26 @@ export function ChainPreview({ compact = false }: { compact?: boolean }) {
     >
       <div className={cn("flex items-center justify-between", compact ? "mb-1" : "mb-2")}>
         <span className="text-[9px] text-white/20 uppercase tracking-wider">Chain</span>
-        <span className="text-[9px] text-white/20 tabular-nums">
-          {activePads.length} active
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-white/20 tabular-nums">
+            {activePads.length} active
+          </span>
+          {!compact && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className={cn(
+                "p-0.5 rounded transition-colors",
+                isCopied
+                  ? "text-green-400/80"
+                  : "text-white/20 hover:text-white/50"
+              )}
+              title="Copy compiled code"
+            >
+              {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="relative overflow-x-auto scrollbar-thin">
@@ -64,7 +94,7 @@ export function ChainPreview({ compact = false }: { compact?: boolean }) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.1 }}
             className={cn(
-              "leading-relaxed whitespace-nowrap",
+              "leading-relaxed whitespace-pre-wrap break-all",
               compact ? "text-[10px]" : "text-[11px] pb-1"
             )}
           >
@@ -81,26 +111,12 @@ export function ChainPreview({ compact = false }: { compact?: boolean }) {
       </div>
 
       {!compact && activePads.length > 0 && (
-        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-white/5 flex-wrap">
-          {[...activePads]
-            .sort((a, b) => a.activatedAt - b.activatedAt)
-            .map((pad, idx) => {
-              const color = CATEGORY_COLORS[pad.category]
-              return (
-                <div key={pad.instanceId} className="flex items-center gap-0.5">
-                  {idx > 0 && (
-                    <span className="text-white/15 text-[9px]">→</span>
-                  )}
-                  <span
-                    className="text-[9px] font-mono px-1 py-0.5 rounded"
-                    style={{ color, backgroundColor: `${color}15`, border: `1px solid ${color}30` }}
-                  >
-                    {pad.functionId}
-                  </span>
-                </div>
-              )
-            })}
-          <span className="text-white/15 text-[9px]">→ out()</span>
+        <div className="mt-2 pt-2 border-t border-white/5">
+          <ChainChips
+            pads={activePads}
+            highlightId={detailPad?.instanceId}
+            onChipClick={selectSlot}
+          />
         </div>
       )}
     </div>

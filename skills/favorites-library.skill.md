@@ -45,12 +45,12 @@ components/launchpad/
 ```
 [Heart click in HydraCanvas]
     → canvas.toDataURL("image/webp", 0.6)          ← thumbnail captured once at save time
-    → saveFavorite({ activePads, compiledCode, thumbnailDataUrl })
+    → saveFavorite({ chains, compiledCode, thumbnailDataUrl })
     → favorites-store: [newFav, ...state.favorites]
     → FavoritesDialog re-renders with new card
 
 [Load click on FavoriteCard]
-    → restoreFromFavorite(fav.activePads)           ← chain-store action
+    → restoreFromFavorite(fav.chains)           ← chain-store action
     → instanceIds regenerated (${functionId}-${now+i}) to avoid timestamp collisions
     → activatedAt regenerated in order to preserve chain sequence
     → compileChain(restored) → compiledCode updates
@@ -59,17 +59,20 @@ components/launchpad/
 
 ### Key Types
 
-**`FavoriteChain`** (`stores/favorites-store.ts`):
+**`FavoriteChain`** (`stores/favorites-store.ts`) — **v2**:
 ```typescript
 {
   id: string                 // "fav-${Date.now()}"
-  name?: string              // optional custom label; auto-derived from code if absent
-  activePads: ActivePad[]    // full snapshot of the pad state at save time
-  compiledCode: string       // compiled Hydra expression string
-  thumbnailDataUrl?: string  // WebP dataURL captured from canvas at save time
-  savedAt: number            // Unix timestamp for display
+  version: 2
+  name?: string
+  chains: Record<"o0"|"o1"|"o2"|"o3", ActivePad[]>
+  compiledCode: string
+  thumbnailDataUrl?: string
+  savedAt: number
 }
 ```
+
+**Migración v1 → v2:** al rehidratar persist, `activePads` legacy se mapea a `chains.o0`; o1–o3 vacíos.
 
 **`ActivePad`** (from `stores/chain-store.ts`) — includes `secondarySourceId` + `secondaryParams`, so modulate/blend source choices are preserved across saves.
 
@@ -109,7 +112,7 @@ useFavoritesStore.getState().saveFavorite({ activePads, compiledCode, thumbnailD
 
 **Restore a favorite:**
 ```typescript
-useChainStore.getState().restoreFromFavorite(favorite.activePads)
+useChainStore.getState().restoreFromFavorite(favorite.chains)
 ```
 
 **Read all favorites:**

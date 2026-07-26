@@ -38,7 +38,8 @@ Grid principal: `grid-rows-[2fr_1fr]` (superior / banda de pads). Zona superior:
 app/launchpad/page.tsx
 ├── components/launchpad/
 │   ├── stage-column.tsx        ← HydraCanvas + ChainPreview compact
-│   ├── param-panel.tsx         ← PadParamPanel + chips activos + GlobalFaders
+│   ├── param-panel.tsx         ← ChainChips + PadParamPanel (armed) + GlobalFaders
+│   ├── chain-chips.tsx         ← chips ordenados compartidos (ChainPreview + ParamPanel)
 │   ├── pad-band.tsx            ← tab state, momentary handlers, shuffle/clear
 │   ├── pad-tab-bar.tsx         ← 5 tabs con contador de activos (role=tablist)
 │   ├── pad-grid.tsx            ← grilla 8×2 por categoría, placeholders, AddPad
@@ -46,8 +47,8 @@ app/launchpad/page.tsx
 │   ├── pad.tsx                 ← pad atómico: toggle/momentary, selección, glow inset
 │   ├── param-slider.tsx        ← sliders horizontales + valor editable + PadParamPanel
 │   ├── global-faders.tsx       ← SPEED/BRIGHT/DECAY/AMOUNT (local state, sin cablear)
-│   ├── chain-preview.tsx       ← código compilado tokenizado; prop compact
-│   ├── hydra-canvas.tsx        ← WebGL, letterbox 16:9, heart + fullscreen
+│   ├── chain-preview.tsx       ← código compilado tokenizado + copy + ChainChips; prop compact
+│   ├── hydra-canvas.tsx        ← WebGL, output tabs o0–o3, grid toggle, preview staging
 │   ├── favorites-dialog.tsx    ← biblioteca de favoritos en modal (header)
 │   └── hydra-thumbnail.tsx     ← thumbnail estático para favoritos
 hooks/

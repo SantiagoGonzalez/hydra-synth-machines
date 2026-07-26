@@ -28,8 +28,6 @@ Digit2 → geometry
 Digit3 → color
 Digit4 → modulate
 Digit5 → blend
-Enter → applyArmedSlot (si armedSlotId)
-Escape → disarmSlot (si armedSlotId)
 ```
 
 ### Guardas obligatorias

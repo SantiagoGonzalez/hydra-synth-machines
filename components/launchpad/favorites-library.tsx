@@ -69,7 +69,7 @@ export function FavoritesLibrary() {
                     compiledCode={fav.compiledCode}
                     thumbnailUrl={fav.thumbnailDataUrl}
                     savedAt={fav.savedAt}
-                    onLoad={() => restoreFromFavorite(fav.activePads)}
+                    onLoad={() => restoreFromFavorite(fav.chains)}
                     onDelete={() => removeFavorite(fav.id)}
                   />
                 ))}

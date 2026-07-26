@@ -68,7 +68,7 @@ export function FavoritesDialog({ trigger }: FavoritesDialogProps) {
                 thumbnailUrl={fav.thumbnailDataUrl}
                 savedAt={fav.savedAt}
                 onLoad={() => {
-                  restoreFromFavorite(fav.activePads)
+                  restoreFromFavorite(fav.chains)
                   setOpen(false)
                 }}
                 onDelete={() => removeFavorite(fav.id)}

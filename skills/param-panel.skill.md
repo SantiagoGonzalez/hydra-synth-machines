@@ -47,11 +47,37 @@ ParamPanel (param-panel.tsx)          ← shell: layout, selección, chips activ
 
 ### Three blocks (top → bottom)
 
-1. **Chain** — `ChainChips` con cadena completa ordenada, pad actual resaltado, posición 1..N
-2. **Detail** — `PadParamPanel` para pad resuelto por `selectDetailPad` o `selectArmedPad`
+1. **Chain chips** — cadena completa ordenada por `activatedAt` vía `ChainChips` compartido; click → `selectSlot`; resalta pad en detalle
+2. **Detail** — `PadParamPanel` para el pad resuelto por `selectDetailPad` (armed > selected > reciente)
 3. **Global** — `GlobalFaders` separados por `border-t`
 
-Componente compartido: `components/launchpad/chain-chips.tsx` (usado también en `ChainPreview`).
+### Staging (armed state)
+
+- `armSlot(slotId)` — único punto de entrada (shift+click en pad; futuro shift+tecla)
+- Pad armado NO está en `activePads`; preview vía `previewCode = compile(activePads + armed)`
+- `HydraCanvas` evalúa `previewCode ?? compiledCode`
+- ParamPanel: banner "ARMED" + botón Apply → `applyArmedSlot`
+- `disarmSlot` revierte canvas automáticamente
+
+### Extensión futura: hover-preview
+
+Patrón documentado para mini-canvas al hover sobre chip/pad armado:
+- Instancia Hydra separada (`hydra-thumbnail.tsx` como referencia)
+- No consumir buffers o0–o3 del canvas principal
+- Evaluar fragmento aislado del pad bajo preview
+
+### ParamValue (escalar | fn(time))
+
+- Tipo: `ParamValue = number | { kind: "fn"; shape; freq; amp; offset }` en `lib/param-value.ts`
+- Toggle `#` / `fn` por parámetro en `SingleParamSlider`
+- Compilador emite `({time}) => offset + amp * Math.sin(time * freq)` (variantes sin/cos/tan/linear)
+- Global faders siguen escalares
+
+### Extensión futura: arrays (seq)
+
+El mismo `ParamValue` puede extenderse con `{ kind: "seq"; values: number[]; fast: number }`.
+El compilador emitiría `[a,b,c].fast(x)` según `docs/hydra-skills-index/arrays/arrays.md`.
+Fase posterior a fn(time); no inventar firmas hasta verificar en el índice Hydra.
 
 ---
 
@@ -121,58 +147,10 @@ activeOfSameType = padSlots.filter(s => s.functionId === pad.functionId && s.isA
 
 ---
 
-## Staging (armed state)
-
-```
-Pad inactivo → shift+click → armed (params editables, preview en canvas)
-armed → Enter o Apply → activo en cadena
-armed → Esc o Cancel → disarmed
-```
-
-- Store: `armedSlotId`, `armSlot`, `disarmSlot`, `applyArmedSlot`
-- Preview: `selectPreviewCode` = cadena activa + pad armado; `HydraCanvas` evalúa preview sin tocar `lastSafeCode`
-- Teclado: Enter/Esc en `use-launchpad-keys.ts`
-
-### Extensión futura — hover preview
-
-- Mini-canvas con instancia Hydra separada (patrón `hydra-thumbnail.tsx`)
-- No consumir o0–o3 del engine principal
-- Punto de entrada: `onPointerEnter` en `Pad` + instancia lazy
-
----
-
-## Parámetros como funciones de time
-
-- Tipo: `ParamValue = number | ParamFnValue` (`lib/param-value.ts`)
-- UI: toggle `#` / `fn` por param en `ParamControl`; shapes sin/cos/tan/linear + freq/amp/offset
-- Compilador emite `({time}) => ...` en `buildCallFragment`
-- Global faders siguen escalares
-
-### Extensión futura — arrays
-
-```ts
-// Encajar en ParamValue:
-{ kind: "seq", values: number[], fast: number }
-// Compilador emitiría: [a,b,c].fast(x)
-```
-
-Ver `docs/hydra-skills-index/arrays/arrays.md`.
-
----
-
-## Multi-output (o0–o3)
-
-- Store: `chains: Record<OutputBuffer, ChainSlice>`, `editingOutput`, `viewMode: single|grid`
-- Compilador: `compileAllChains` → bloques `.out(oN)` + `render()` o `render(oX)`
-- UI: selector o0–o3 + toggle grilla 2×2 en `HydraCanvas`
-- Fuentes secundarias: `getSecondarySourceOptions()` incluye `src(o0..o3)`
-- Favoritos v2: `{ version: 2, chains: { o0: [...], ... } }`; v1 migra a o0
-
----
-
 ## GlobalFaders (estado actual)
 
 ```ts
+// global-faders.tsx — useState local, NO conectado al store ni compiler
 { speed, brightness, decay, amount }
 ```
 

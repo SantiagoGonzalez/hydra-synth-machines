@@ -21,6 +21,8 @@ export function PadBand() {
   const clearAll = useChainStore((s) => s.clearAll)
   const selectSlot = useChainStore((s) => s.selectSlot)
   const setSlotMode = useChainStore((s) => s.setSlotMode)
+  const armSlot = useChainStore((s) => s.armSlot)
+  const disarmSlot = useChainStore((s) => s.disarmSlot)
 
   const [activeCategory, setActiveCategory] = useState<HydraCategory>("source")
 
@@ -116,6 +118,8 @@ export function PadBand() {
               category={cat}
               onToggleSlot={handleToggleSlot}
               onSelectSlot={handleSelectSlot}
+              onArmSlot={armSlot}
+              onDisarmSlot={disarmSlot}
               onRemoveSlot={removeSlot}
               onAddSlot={addSlot}
               onModeChange={handleModeChange}
