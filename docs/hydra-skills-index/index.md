@@ -140,3 +140,6 @@ Interactive step-by-step visual synthesizer applying each transform from this in
 | [`docs/glosario-hydra.md`](../glosario-hydra.md) | Vocabulario Hydra ↔ UI |
 | [`tasks/backlog.md`](../../tasks/backlog.md) | Backlog de features |
 | [`docs/planning/hydra-registry-gaps.md`](../planning/hydra-registry-gaps.md) | Desajustes registry / compilador / runtime |
+| [`docs/planning/param-panel-redesign.md`](../planning/param-panel-redesign.md) | Rediseño param panel |
+| [`docs/planning/projection-controls.md`](../planning/projection-controls.md) | Controles de proyección (dimmer) |
+| [`docs/planning/hydra-globals.md`](../planning/hydra-globals.md) | Globales Hydra y cableado |

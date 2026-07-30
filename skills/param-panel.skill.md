@@ -167,8 +167,12 @@ activeOfSameType = padSlots.filter(s => s.functionId === pad.functionId && s.isA
 ```
 
 - Viven en el store y son navegables por teclado (`buildControlList`)
-- Todavía **sin efecto** en `compiledCode`
-- Refactor futuro: pasar a `compileChain` / settings Hydra
+- Todavía **sin efecto** en el render Hydra — ver `docs/planning/hydra-globals.md` (Epic H)
+- Refactor futuro: cablear `speed`/`bpm` en evaluador; revisar semántica BRIGHT/DECAY/AMOUNT
+
+## Param panel — rediseño (plan)
+
+Problemas UX y dirección (faders verticales, fn, stepper): **`docs/planning/param-panel-redesign.md`** (Epic G en `tasks/backlog.md`).
 
 ---
 

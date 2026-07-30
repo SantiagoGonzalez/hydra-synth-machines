@@ -8,6 +8,9 @@
 | [lessons.md](./lessons.md) | Patrones y errores a no repetir |
 | [../docs/glosario-hydra.md](../docs/glosario-hydra.md) | Vocabulario Hydra ↔ launchpad |
 | [../docs/planning/hydra-registry-gaps.md](../docs/planning/hydra-registry-gaps.md) | Desajustes registry / compilador / runtime (ej. `modulateScroll`) |
+| [../docs/planning/param-panel-redesign.md](../docs/planning/param-panel-redesign.md) | Rediseño param panel (faders verticales, fn, stepper) |
+| [../docs/planning/projection-controls.md](../docs/planning/projection-controls.md) | Dimmer y controles de proyección |
+| [../docs/planning/hydra-globals.md](../docs/planning/hydra-globals.md) | Faders globales sin efecto + gaps `bpm`, `setResolution` |
 
 ## Skills relacionados (specs de implementación)
 
@@ -26,3 +29,4 @@
 2. Decisión tomada → mover de “abiertas” a sección **Decisiones** en `backlog.md` con fecha.
 3. Corrección recurrente → una línea en `lessons.md`.
 4. Desajuste registry/runtime → `docs/planning/hydra-registry-gaps.md`.
+5. UX param panel / proyección / globals → docs en `docs/planning/`.
