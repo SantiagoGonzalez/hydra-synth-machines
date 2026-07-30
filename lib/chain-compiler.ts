@@ -29,8 +29,33 @@ function buildSecondarySourceFragment(pad: ActivePad, fallbackId: string): strin
   return secParamValues.length > 0 ? `${secDef.id}(${secParamValues.join(", ")})` : `${secDef.id}()`
 }
 
+/** Expande modulateScroll al par real de Hydra: modulateScrollX + modulateScrollY */
+function buildModulateScrollFragment(pad: ActivePad, def: HydraFunctionDef): string | null {
+  if (!def.secondarySourceId) return null
+
+  const secCall = buildSecondarySourceFragment(pad, def.secondarySourceId)
+  if (!secCall) return null
+
+  const param = (name: string, fallback: number) =>
+    emitParamExpression(
+      (pad.params[name] ?? fallback) as ParamValue | undefined,
+      fallback
+    )
+
+  const scrollX = param("scrollX", 0.5)
+  const scrollY = param("scrollY", 0.5)
+  const speedX = param("speedX", 0)
+  const speedY = param("speedY", 0)
+
+  return `modulateScrollX(${secCall}, ${scrollX}, ${speedX}).modulateScrollY(${secCall}, ${scrollY}, ${speedY})`
+}
+
 /** Construye el fragmento de llamada para un pad (sin encadenar) */
 function buildCallFragment(pad: ActivePad, def: HydraFunctionDef): string {
+  if (def.id === "modulateScroll") {
+    return buildModulateScrollFragment(pad, def) ?? `${def.id}()`
+  }
+
   const paramValues = def.params.map((p) => {
     const val = pad.params[p.name] ?? p.default
     return emitParamExpression(val as ParamValue | undefined, p.default)

@@ -6,8 +6,10 @@
 
 | Function | Effect |
 |----------|--------|
-| `modulateScrollX(texture, amount)` | Horizontal scroll driven by modulator |
-| `modulateScrollY(texture, amount)` | Vertical scroll driven by modulator |
+| `modulateScrollX(texture, scrollX, speed)` | Horizontal scroll driven by modulator |
+| `modulateScrollY(texture, scrollY, speed)` | Vertical scroll driven by modulator |
+
+> **Launchpad:** el pad `modulateScroll` no existe en hydra-synth; el compilador lo expande a `.modulateScrollX(tex, scrollX, speedX).modulateScrollY(tex, scrollY, speedY)` con el mismo modulador en ambos ejes.
 
 ## Role in the Pipeline
 

@@ -130,3 +130,13 @@ Verify in the [interactive function reference](https://hydra.ojack.xyz/functions
 ## Future Work
 
 Interactive step-by-step visual synthesizer applying each transform from this index — **not implemented** in this documentation pass.
+
+---
+
+## Launchpad (este repo)
+
+| Doc | Uso |
+|-----|-----|
+| [`docs/glosario-hydra.md`](../glosario-hydra.md) | Vocabulario Hydra ↔ UI |
+| [`tasks/backlog.md`](../../tasks/backlog.md) | Backlog de features |
+| [`docs/planning/hydra-registry-gaps.md`](../planning/hydra-registry-gaps.md) | Desajustes registry / compilador / runtime |
