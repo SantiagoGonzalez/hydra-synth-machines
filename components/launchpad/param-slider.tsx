@@ -92,7 +92,7 @@ export function SingleParamSlider({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-[9px] text-white/40 uppercase tracking-wider truncate">
+        <span className="font-mono text-[11px] text-white/60 uppercase tracking-wider truncate">
           {param.name}
         </span>
         <div className="flex items-center gap-1 shrink-0">
@@ -100,10 +100,10 @@ export function SingleParamSlider({
             type="button"
             onClick={toggleMode}
             className={cn(
-              "font-mono text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider transition-colors",
+              "font-mono text-[11px] min-h-7 min-w-7 px-1.5 py-1 rounded border uppercase tracking-wider transition-colors",
               isFn
-                ? "border-yellow-400/40 text-yellow-400/80 bg-yellow-400/10"
-                : "border-white/10 text-white/25 hover:text-white/50"
+                ? "border-yellow-400/50 text-yellow-400 bg-yellow-400/20"
+                : "border-white/20 text-white/70 hover:text-white/90"
             )}
             title={isFn ? "Switch to scalar" : "Switch to fn(time)"}
           >
@@ -123,7 +123,7 @@ export function SingleParamSlider({
                   ;(e.target as HTMLInputElement).blur()
                 }
               }}
-              className="w-14 font-mono text-[8px] text-white/50 tabular-nums bg-white/5 border border-white/10 rounded px-1 py-0.5 text-right focus:outline-none focus:ring-1 focus:ring-white/30"
+              className="w-14 font-mono text-[11px] text-white/80 tabular-nums bg-white/5 border border-white/10 rounded px-1 py-0.5 text-right focus:outline-none focus:ring-1 focus:ring-white/30"
             />
           )}
         </div>
@@ -160,8 +160,8 @@ export function SingleParamSlider({
               )}
             >
               <div className="flex justify-between">
-                <span className="font-mono text-[7px] text-white/25 uppercase">{field}</span>
-                <span className="font-mono text-[7px] text-white/40 tabular-nums">
+                <span className="font-mono text-[9px] text-white/60 uppercase">{field}</span>
+                <span className="font-mono text-[9px] text-white/70 tabular-nums">
                   {Math.round(value[field] * 1000) / 1000}
                 </span>
               </div>

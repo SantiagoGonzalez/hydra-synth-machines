@@ -56,7 +56,7 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
-            "font-mono text-[10px] font-semibold",
+            "font-mono text-[11px] font-semibold",
             isArmed && "text-yellow-400/90",
             pad.isBypassed && "line-through opacity-50"
           )}
@@ -70,10 +70,10 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
             type="button"
             onClick={() => toggleBypass(pad.instanceId)}
             className={cn(
-              "font-mono text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider transition-colors shrink-0",
+              "font-mono text-[11px] min-h-7 px-2 py-1 rounded border uppercase tracking-wider transition-colors shrink-0",
               pad.isBypassed
                 ? "border-amber-400/50 text-amber-300 bg-amber-400/10"
-                : "border-white/10 text-white/25 hover:text-white/50"
+                : "border-white/20 text-white/70 hover:text-white/90"
             )}
             title={pad.isBypassed ? "Re-enable pad in chain" : "Bypass pad (B)"}
           >
