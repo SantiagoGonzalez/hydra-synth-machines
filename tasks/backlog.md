@@ -20,7 +20,7 @@
 | ID   | Ítem                                    | Estado        | Esfuerzo | Prioridad | Notas                                                                    |
 | ---- | --------------------------------------- | ------------- | -------- | --------- | ------------------------------------------------------------------------ |
 | A-01 | `Z` → `F` para modo función             | **cancelled** | —        | —         | Descartado: clash con pad posicional `KeyF` (#12). **Mantener** `Z`**.** |
-| A-02 | Desactivar pad en cadena (panel params) | done          | S–M      | Alta      | Hints bypass (B) y remove (⇧⌫); atajo real = Shift+Backspace. |
+| A-02 | Desactivar pad en cadena (panel params) | done          | S–M      | Alta      | Hints bypass (B) y remove (⇧⌫); atajo real = Shift+Backspace.            |
 
 
 ---
@@ -32,7 +32,7 @@
 
 | ID   | Ítem                  | Estado | Esfuerzo  | Prioridad | Notas                                                               |
 | ---- | --------------------- | ------ | --------- | --------- | ------------------------------------------------------------------- |
-| B-01 | Glosario Hydra        | done  | S         | Alta      | Tooltips subset (outputs, chain, speed) en UI.                |
+| B-01 | Glosario Hydra        | done   | S         | Alta      | Tooltips subset (outputs, chain, speed) en UI.                      |
 | B-02 | Design system formal  | idea   | M         | Media     | Tokens en `app/globals.css`. Doc `docs/design-system.md` por crear. |
 | B-03 | Selector de temas     | idea   | M         | Media     | `data-theme` + swap CSS vars.                                       |
 | B-04 | Tema doom64 (tweakcn) | idea   | S (spike) | Baja      | Evaluar contraste en pads/canvas.                                   |
@@ -45,13 +45,13 @@
 ## Epic C — Cadena: escribir, codear, live coding
 
 
-| ID   | Ítem                            | Estado | Esfuerzo | Prioridad  | Notas                                   |
-| ---- | ------------------------------- | ------ | -------- | ---------- | --------------------------------------- |
-| C-01 | Editar cadena como código       | idea   | L        | Media      | Editor; sync con pads.                  |
-| C-02 | Live coding estilo Hydra        | idea   | L        | Media-baja | REPL vía `chain-evaluator.ts`.          |
-| C-03 | Overlay código sobre canvas     | idea   | S–M      | Media      | Toggle CSS; reutilizar `chain-preview`. |
-| C-04 | Undo/redo cadena (Ctrl+Z/Y, 5 niveles) | done   | M        | Alta       | Store + UI Ctrl/Cmd+Z y Ctrl/Cmd+Y (o ⇧Z). |
-| C-05 | Copy/paste en ChainPreview      | done   | S–M      | Alta       | Copy en compact + Ctrl/Cmd+C en zona chain (fase 0). |
+| ID   | Ítem                                   | Estado | Esfuerzo | Prioridad  | Notas                                                |
+| ---- | -------------------------------------- | ------ | -------- | ---------- | ---------------------------------------------------- |
+| C-01 | Editar cadena como código              | idea   | L        | Media      | Editor; sync con pads.                               |
+| C-02 | Live coding estilo Hydra               | idea   | L        | Media-baja | REPL vía `chain-evaluator.ts`.                       |
+| C-03 | Overlay código sobre canvas            | idea   | S–M      | Media      | Toggle CSS; reutilizar `chain-preview`.              |
+| C-04 | Undo/redo cadena (Ctrl+Z/Y, 5 niveles) | done   | M        | Alta       | Store + UI Ctrl/Cmd+Z y Ctrl/Cmd+Y (o ⇧Z).           |
+| C-05 | Copy/paste en ChainPreview             | done   | S–M      | Alta       | Copy en compact + Ctrl/Cmd+C en zona chain (fase 0). |
 
 
 
@@ -114,7 +114,7 @@
 
 
 
-## Epic E — UI componentes (pads)
+## Epic E — UI componentesf (pads)
 
 
 | ID   | Ítem                       | Estado | Esfuerzo | Prioridad | Notas                                              |
@@ -132,18 +132,23 @@
 > Spec: `docs/planning/param-panel-redesign.md`
 
 
-| ID   | Ítem                                        | Estado | Esfuerzo | Prioridad | Notas                                                     |
-| ---- | ------------------------------------------- | ------ | -------- | --------- | --------------------------------------------------------- |
-| G-01 | Tipografía y contraste (fn, valor, botones) | done   | S        | Alta      | param-slider + pad-param-panel (2026-07-31). |
-| G-02 | Atajo focus → input numérico                | done   | S        | Media     | `/` y `Enter` en zona params; `Escape` cancela edición.                       |
-| G-03 | Spike faders verticales                     | idea   | M        | Alta      | Piloto aislado descartado (2026-07-31); hacer con épica G/G-06. |
-| G-04 | Primitiva `ParamFader` compartida           | idea   | M        | Media     | Pad params + globals + proyección.                        |
-| G-05 | Number stepper (evaluar)                    | idea   | S–M      | Baja      | Tradeoffs en planning doc.                                |
-| G-06 | Migrar panel completo a vertical            | idea   | M–L      | Media     | Tras validar G-03.                                        |
-| G-07 | RGB: HEX + color picker + sliders           | done   | M        | Alta      | Conviven las 3 vías; `solid` + `color`. Ver planning doc. |
+| ID   | Ítem                                        | Estado | Esfuerzo | Prioridad | Notas                                                                                                                                                                                                                                                                                                                 |
+| ---- | ------------------------------------------- | ------ | -------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G-01 | Tipografía y contraste (fn, valor, botones) | done   | S        | Alta      | param-slider + pad-param-panel (2026-07-31).                                                                                                                                                                                                                                                                          |
+| G-02 | Atajo focus → input numérico                | done   | S        | Media     | `/` y `Enter` en zona params; `Escape` cancela edición.                                                                                                                                                                                                                                                               |
+| G-03 | Spike faders verticales                     | idea   | M        | Alta      | Piloto aislado descartado (2026-07-31); hacer con épica G/G-06.                                                                                                                                                                                                                                                       |
+| G-04 | Primitiva `ParamFader` compartida           | idea   | M        | Media     | Pad params + globals + proyección.                                                                                                                                                                                                                                                                                    |
+| G-05 | Number stepper (evaluar)                    | idea   | S–M      | Baja      | Tradeoffs en planning doc.                                                                                                                                                                                                                                                                                            |
+| G-06 | Migrar panel completo a vertical            | idea   | M–L      | Media     | Tras validar G-03.                                                                                                                                                                                                                                                                                                    |
+| G-07 | RGB: HEX + color picker + sliders           | done   | M        | Alta      | Conviven las 3 vías; `solid` + `color`. Ver planning doc.                                                                                                                                                                                                                                                             |
+| G-08 | Spike: color por **swatches / paleta**      | done   | S        | Media     | Spike cerrado 2026-07-31: **go grid custom** (0 KB). Ver `param-panel-redesign.md` §G-08. Impl → **G-10**. |
+| G-09 | Perf del color picker nativo                | done   | S        | Media     | Fix 2026-07-31: `updateParams` atómico — compile por evento picker 3×→1× (medido con script store). rAF no necesario. |
+| G-10 | Swatches de color (grid custom)             | idea   | S        | Media     | Post-spike G-08: paleta fija VJ 4×4 en `rgb-color-control`; `hexToRgb` + `updateParams`. Sin deps. |
 
 
 **Mantener sin cambiar:** `source-selector.tsx` (referencia de claridad).
+
+**Feedback oleada G-07 (2026-07-31):** picker nativo aceptable como primer approach; siguiente iteración orientada a **swatches** (G-08) + investigar **perf** del nativo (G-09).
 
 ---
 
@@ -154,12 +159,12 @@
 > Spec: `docs/planning/hydra-globals.md`
 
 
-| ID   | Ítem                            | Estado | Esfuerzo | Prioridad | Notas                                |
-| ---- | ------------------------------- | ------ | -------- | --------- | ------------------------------------ |
-| H-01 | Cablear `speed` al evaluador    | done   | S        | **Alta**  | `setSpeed` en evaluador + `useEffect` en hydra-canvas (2026-07-31). |
-| H-02 | Cablear BRIGHT / FEEDBACK (globals) | done   | S–M      | Alta      | Brightness CSS; feedback en compilador; amount eliminado. |
-| H-03 | Exponer `bpm` en UI             | done   | S        | Media     | Fader BPM + `setBpm` en evaluador (patrón H-01).  |
-| H-04 | `setResolution` modo proyector  | idea   | M        | Media     | Con D-05.                            |
+| ID   | Ítem                                | Estado | Esfuerzo | Prioridad | Notas                                                               |
+| ---- | ----------------------------------- | ------ | -------- | --------- | ------------------------------------------------------------------- |
+| H-01 | Cablear `speed` al evaluador        | done   | S        | **Alta**  | `setSpeed` en evaluador + `useEffect` en hydra-canvas (2026-07-31). |
+| H-02 | Cablear BRIGHT / FEEDBACK (globals) | done   | S–M      | Alta      | Brightness CSS; feedback en compilador; amount eliminado.           |
+| H-03 | Exponer `bpm` en UI                 | done   | S        | Media     | Fader BPM + `setBpm` en evaluador (patrón H-01).                    |
+| H-04 | `setResolution` modo proyector      | idea   | M        | Media     | Con D-05.                                                           |
 
 
 ---
@@ -327,6 +332,9 @@
 ### Fase 0b — Param panel color (Epic G)
 
 - [x] G-07 HEX + picker + sliders (`solid`, `color`)
+- [x] G-08 spike swatches / paleta (lib ligera vs custom) — **go grid custom**
+- [x] G-09 perf color picker nativo (`updateParams` atómico, 3×→1× compile)
+- [ ] G-10 swatches grid custom (post-spike G-08)
 
 
 
@@ -378,9 +386,11 @@
 ## Decisiones cerradas
 
 
-| Fecha      | Decisión                                                                 |
-| ---------- | ------------------------------------------------------------------------ |
-| 2026-07-29 | **A-01 cancelado** — mantener `Z` para modo función (clash con pad `F`). |
+| Fecha      | Decisión                                                                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-29 | **A-01 cancelado** — mantener `Z` para modo función (clash con pad `F`).                                                                                                  |
+| 2026-07-31 | **#9 G-07:** HEX solo `#RRGGBB` en v1 (sin alpha); canal `a` de `solid` queda en slider. Picker/HEX en `color()` (multiplier) clampa a [0,1]; valores >1 solo por slider. |
+| 2026-07-31 | **#10 J audio:** mic **opt-in** (default off); bins default **4** (`numBins` de `_initAudio`); v1 solo micrófono (system audio = J-06).                                   |
 
 
 
@@ -388,21 +398,19 @@
 ## Decisiones abiertas
 
 
-| #   | Pregunta                                                         | Opciones / default            |
-| --- | ---------------------------------------------------------------- | ----------------------------- |
-| 1   | A-02: bypass vs quitar cadena                                    | —                             |
-| 2   | D-02: output proyectado fijo o elegible                          | —                             |
-| 3   | D-06: dimmer solo en proyección o también stage                  | Ver `projection-controls.md`  |
-| 4   | G-03: faders verticales en todo el panel                         | Spike primero                 |
-| 5   | H-02: brightness = CSS vs `.brightness()`                        | —                             |
-| 6   | C-01: editor por output o multi-buffer                           | —                             |
-| 7   | F-01: tutorial obligatorio o opt-in                              | —                             |
-| 8   | I-01: ¿dónde vive la doc fuera del repo? ¿README mínimo en raíz? | —                             |
-| 9   | G-07: ¿HEX con alpha en v1? ¿Clamp picker en `color()`?          | Ver `param-panel-redesign.md` |
-| 10  | J: ¿audio opt-in? ¿bins default? ¿solo mic en v1?                | Ver `audio-reactivity.md`     |
-| 11  | K: ¿una escena activa o varias en paralelo?                      | Ver `scene-composition.md`    |
-| 12  | D-07 vs D-08: ¿PNG en Hydra o capa DOM primero?                  | —                             |
-| 13  | L: ¿drawer vs inline? ¿modulate dentro de subchain en v2?        | Ver `subchains.md`            |
+| #   | Pregunta                                                         | Opciones / default           |
+| --- | ---------------------------------------------------------------- | ---------------------------- |
+| 1   | A-02: bypass vs quitar cadena                                    | —                            |
+| 2   | D-02: output proyectado fijo o elegible                          | —                            |
+| 3   | D-06: dimmer solo en proyección o también stage                  | Ver `projection-controls.md` |
+| 4   | G-03: faders verticales en todo el panel                         | Spike primero                |
+| 5   | H-02: brightness = CSS vs `.brightness()`                        | —                            |
+| 6   | C-01: editor por output o multi-buffer                           | —                            |
+| 7   | F-01: tutorial obligatorio o opt-in                              | —                            |
+| 8   | I-01: ¿dónde vive la doc fuera del repo? ¿README mínimo en raíz? | —                            |
+| 11  | K: ¿una escena activa o varias en paralelo?                      | Ver `scene-composition.md`   |
+| 12  | D-07 vs D-08: ¿PNG en Hydra o capa DOM primero?                  | —                            |
+| 13  | L: ¿drawer vs inline? ¿modulate dentro de subchain en v2?        | Ver `subchains.md`           |
 
 
 ---
@@ -423,4 +431,5 @@
 ## Deuda conocida (documentada, no bug de UI)
 
 - **Global faders** en store sin efecto en Hydra — ver Epic H
+- **Swatches de color (G-08/G-10):** spike cerrado go grid custom; picker nativo perf resuelto en G-09 (`updateParams` atómico)
 

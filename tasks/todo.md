@@ -1,177 +1,168 @@
-# Todo — sesión 2026-07-31 (oleada Fase 0b + 0c)
+# Todo — sesión 2026-07-31 (oleada G-08 / G-09)
 
-> Plan: hydra-planner · [`priorizacion.md`](./priorizacion.md) · [`backlog.md`](./backlog.md)
-> **Estado:** listo para implementar (hydra-implementer). Double-check con lectura real de código + fuente de `hydra-synth@1.4.0`.
+> Plan: hydra-planner · [`backlog.md`](./backlog.md) (Epic G, L144–150) · [`priorizacion.md`](./priorizacion.md) (contexto oleada 1–3)
+> **Estado:** listo para implementar (hydra-implementer). Scope fijado por el usuario (follow-ups de G-07); **no** re-prioriza la oleada anterior.
+> **Branch:** no hay branch de oleada en `priorizacion.md` para estos ítems. Recomendado antes de codear: `git checkout -b oleada/2026-07-31-color-followups` (o commitear en `main` si el usuario prefiere). El planner **no** crea branch.
 
 ---
 
 ## Objetivo del día
 
-Cerrar **Fase 0b** (G-07 RGB: HEX + picker + sliders) y **Fase 0c** (audio MVP: motor + mic UI + modo ♪ en params). Bloque 2 desbloquea al 3. Un commit por bloque, chat nuevo por bloque (o modo oleada 1→2→3 con commit entre cada uno).
+Resolver los dos follow-ups de **G-07** (RGB HEX + picker + sliders, ya `done`):
 
-> **Notas de double-check (hallazgos que cambian el plan):**
-> - **G-07:** hoy **no existe** detección de grupos RGB. `pad-param-panel.tsx` (L96–139) mapea `definition.params` 1:1 a `SingleParamSlider`. Hay que **introducir** la metadata `colorInput` en el registry y el render condicional; no hay patrón previo que imitar salvo `source-selector` (claridad).
-> - **J-01 (motor):** verificado en `node_modules/hydra-synth/src/hydra-synth.js`: `this.detectAudio` es **mutable** (L43), `_initAudio()` (L212) crea `this.synth.a = new Audio({numBins:4, parentEl: this.canvas.parentNode})`, y `tick()` (L427) hace `if(this.detectAudio===true) this.synth.a.tick()`. → **Se puede encender audio sin recrear la instancia Hydra** (lazy `_initAudio()` + flag). `_initAudio` es método interno (underscore): citarlo, no inventarlo; riesgo de cambio en upgrade.
-> - **J-02 (mic/FFT):** `Audio` (`src/lib/audio.js`) pide `getUserMedia({audio:true})` **en el constructor** (L48–49) → el prompt de permiso ocurre al primer `_initAudio()` (perfecto para opt-in). Anexa un canvas `100×80` abajo-derecha (L41); `show()/hide()` togglean `display` (L167–176). `fft` arranca en `[0,0,0,0]` (L142) → `a.fft[i]` es seguro aun sin datos. **No hay método de teardown del stream** (limitación, ver Bloque 2 Riesgos).
-> - **J-03:** patrón a imitar = `emitParamExpression` rama `fn` (`lib/param-value.ts` L53–62) que emite `({time}) => ...`. Favoritos serializan `params: Record<string, ParamValue>` como JSON plano; el modo audio persiste **solo si** `normalizeParamValue` (L37–41) lo reconoce al restaurar.
-> - **Teclado:** `isEditableTarget` (`hooks/use-launchpad-keys.ts` L69–74) ya excluye `INPUT` (salvo `type="range"`) y `SELECT` → los nuevos inputs HEX (`type="text"`) y picker (`type="color"`) quedan protegidos sin tocar el hook.
-> - Se sobrescribe el `todo.md` anterior (oleada G-02/C-04/B-01/H-02 → **done**).
+- **G-09** — quitar el lag al arrastrar el color picker nativo (fix corto, root-cause). **Implementación real.**
+- **G-08** — decidir go/no-go de "color por swatches / paleta": **SOLO SPIKE** (investigación + nota + recomendación; **no** se construye la paleta).
+
+**Orden y oleada:** hacer **G-09 primero** (Bloque 1, fix concreto que también reduce el costo de cualquier commit multi-canal futuro), luego **G-08** (Bloque 2, nota). Son **independientes** (G-09 no depende de G-08). Recomendación: **una sola oleada** — G-09 (fix S) + G-08 (nota, sin código de UI). Commit separado por bloque: G-09 = commit de código; G-08 = commit de doc (nota del spike).
 
 ---
 
-## Bloque 1 — G-07 · RGB: HEX + color picker + sliders
+## Veredicto del double-check de perf (G-09) — leído en código real
 
-**Decisión:** modelar el grupo de color como **metadata declarativa** en el registry (`colorInput`) y renderizar un bloque compuesto nuevo `rgb-color-control.tsx` **encima** de los sliders r/g/b/a existentes, con `pad.params` como **única fuente de verdad**. HEX y picker escriben los tres canales vía `updateParam` (uno por canal); los sliders siguen bindeados a los mismos params → sincronización automática por re-render. Nombre del componente: **`components/launchpad/rgb-color-control.tsx`** (coincide con la spec `param-panel-redesign.md` L141). Utilidades de conversión en **`lib/color-param.ts`** (kebab-case).
-**Descartado:**
-- Detección por nombres de param (heurística `r/g/b`) en el componente: frágil (colisiona con `shift`, que tiene r/g/b pero **no** es sRGB). Se usa metadata explícita en el registry → `shift` no la declara y no muestra bloque color.
-- Modo excluyente (picker **o** sliders): la spec pide que **convivan** editando el mismo estado. No se hace toggle.
-- Alpha en HEX (`#RRGGBBAA`) y `a` en el picker: **fuera de v1** (decisión #9). El canal `a` de `solid` queda como slider normal debajo.
-- fn/audio por canal en el bloque color: fase posterior; v1 usa `scalarPreview` para el swatch y **sobrescribe a número** si el canal estaba en fn/audio al editar HEX/picker (spec criterio 3).
-**Archivos (rutas confirmadas):**
-- `lib/hydra-registry.ts` — extender `HydraFunctionDef` (L15–23) con `colorInput?: { channels: ("r"|"g"|"b")[]; alphaParam?: "a"; mode: "unit" | "multiplier" }`. Setear en `solid` (L78–88): `{ channels:["r","g","b"], alphaParam:"a", mode:"unit" }`. En `color` (L173–182): `{ channels:["r","g","b"], mode:"multiplier" }`. **No** tocar `shift`.
-- `lib/color-param.ts` **(nuevo)** — `rgbToHex(r,g,b)` (canales 0–1 → `#RRGGBB`), `hexToRgb(hex)` (→ `{r,g,b}` en 0–1, valida `#RGB` y `#RRGGBB`, retorna `null` si inválido). En `mode:"multiplier"` el picker **clampa** a [0,1] (decisión #9); si algún canal >1, `rgbToHex` clampa para el swatch (hint opcional "clamped").
-- `components/launchpad/rgb-color-control.tsx` **(nuevo)** — props: `channels`, `mode`, valores actuales (números vía `scalarPreview`), `onChannelChange(channel, value)`. Render: swatch + `<input type="text">` HEX (draft + commit en Enter/blur, patrón de `param-slider.tsx` L119–140) + `<input type="color">`. Emite `updateParam` por canal.
-- `components/launchpad/pad-param-panel.tsx` — dentro de `hasMainParams` (L96), **antes** del `.map` de sliders (L98): si `definition.colorInput`, renderizar `<RgbColorControl>` conectado a `updateParam(pad.instanceId, ch, val)`. Los sliders r/g/b/a se siguen renderizando igual (sin regresión).
-- (doc) `skills/param-panel.skill.md` — anotar el contrato `colorInput` (opcional, si el implementer tiene margen).
-**Pasos:**
-- [x] Agregar tipo `colorInput` a `HydraFunctionDef` y setearlo en `solid` y `color`.
-- [x] Crear `lib/color-param.ts` con `rgbToHex`/`hexToRgb` + validación + clamp multiplier.
-- [x] Crear `rgb-color-control.tsx` (swatch + HEX + picker; draft/commit; clamp).
-- [x] Render condicional en `pad-param-panel.tsx` (bloque arriba de sliders).
-- [x] Verificar sync bidireccional slider ↔ HEX ↔ picker en `solid` y `color`.
-**Criterio de hecho:**
-- [x] En `solid` y `color`: HEX, picker nativo y sliders muestran **el mismo color** y quedan sincronizados.
-- [x] Editar HEX/picker actualiza el canvas vía `updateParam` en los 3 canales.
-- [x] `color` (multiplier): picker/HEX clampan a [0,1]; valores >1 solo por slider (sin romper el swatch).
-- [x] Sliders por canal siguen funcionando (sin regresión); `a` de `solid` intacto.
-- [x] `shift` **no** muestra bloque HEX/picker.
-**Tests manuales:**
-1. Activar pad `solid` → abrir params → escribir `#44ff88` + Enter: swatch, picker y sliders r/g/b se actualizan y el canvas cambia.
-2. Mover slider `g` en `solid`: HEX y picker reflejan el nuevo valor al instante.
-3. Activar pad `color` → subir slider `r` a 1.8: el swatch muestra clamp (no rompe); bajar por picker vuelve a ≤1.
-4. Activar pad `shift`: confirmar que **no** aparece el bloque color.
-**Riesgos:**
-- Canal en modo `fn`/`audio` (objeto, no número): el swatch usa `scalarPreview`; editar HEX/picker sobrescribe a número (pérdida silenciosa del fn de ese canal) → aceptable v1, documentar en tooltip/hint.
-- Redondeo 0–1 ↔ 0–255 puede "saltar" el último dígito del slider (`step 0.01`) — usar `Math.round` consistente en `color-param.ts`.
-- `<input type="color">` no soporta alpha → alpha de `solid` queda solo en slider (esperado, decisión #9).
-- Foco/atajos: confirmar que HEX y picker no roban `1–5`/`Z` (ya cubierto por `isEditableTarget`, pero test rápido).
-**Escalación:** si el sync entre tres vías genera loops de render o el draft de HEX pelea con el re-render del store, **parar y re-planear** el modelo de estado (posible draft local en el componente vs commit atómico). No introducir un store de color separado sin avisar.
-**Modelo sugerido:** **Opus** (M; componente nuevo + metadata + conversión con edge cases de clamp).
-**Commit:** `feat(params): agrega HEX y color picker para solid y color`
+**Hipótesis del backlog: CONFIRMADA a nivel store (con un matiz sobre `run()`).**
+
+Cadena real del arrastre del picker nativo:
+
+1. `<input type="color">` con `onChange={handlePickerChange}` — el picker nativo **emite eventos de forma continua durante el drag** (input live), no solo al soltar.
+2. `handlePickerChange` (`rgb-color-control.tsx` L58–65) → `applyRgb(r,g,b)` (L37–45).
+3. `applyRgb` llama **3×** `onChannelChange` (r, g, b) → en el panel eso es **3× `updateParam`** (`pad-param-panel.tsx` L105: `onChannelChange={(ch,val)=>updateParam(pad.instanceId, ch, val)}`).
+4. Cada `updateParam` (`chain-store.ts` L705–714) ejecuta `updateChain` → `syncEditingView` (L172–194) → `rebuildCompiled` → `compileMultiChain` **sobre los 4 output buffers** (`chain-compiler.ts` L154–177). ⇒ **3× recompilación completa multi-output por cada evento del drag.**
+5. `HydraCanvas` está suscripto a `compiledCode` (`hydra-canvas.tsx` L26) y su `useEffect` (L66–83) llama `evaluatorRef.current.run(compiledCode, …)`. `run()` (`chain-evaluator.ts` L141–170) construye un **`new Function(...)`** con ~90 claves bindeadas y lo evalúa **en cada cambio**.
+
+**Matiz honesto (no asumir el "3×" en `run()`):** las 3 llamadas a `set()` de zustand ocurren **síncronas dentro de un mismo event handler** de React → por el batching de React 18 el **re-render y el `useEffect`/`run()` probablemente disparan 1× por evento `onChange`**, no 3×. Lo que **sí** se ejecuta 3× síncrono es `compileMultiChain` (recompila los 4 outputs 3 veces por evento). Sumado a que el picker emite muchos eventos/seg durante el drag, cada uno paga compile(×3) + `new Function`+eval. **Ese es el costo real.** (Verificar los números exactos en el paso de medición.)
+
+**Fix más elegante (mi recomendación, difiere del backlog):**
+- **Primario (root-cause): commit atómico multi-canal.** Nueva acción de store `updateParams(instanceId, patch)` que fusiona varios params en **un solo `set`** → **una sola** `syncEditingView`/`compileMultiChain`. `applyRgb` la llama **una vez** con `{r,g,b}`. Elimina el 3× (queda 1× compile por evento), es minúsculo (espeja `updateParam`), **reutilizable** (sirve a cualquier escritura multi-canal futura, p. ej. swatches de G-08) y **no** introduce estado espejo ni riesgo de desync.
+- **Descartado como primario: "preview local + commit on `pointerup`"** (propuesta del backlog). El `<input type="color">` abre el diálogo nativo del SO; **no** hay un `pointerup` fiable del arrastre dentro del popup en Chrome, y agregar estado local espejo del color rompe la "única fuente de verdad = `pad.params`" que G-07 dejó establecida (riesgo de desync HEX↔picker↔sliders). Solo se consideraría si, ya con commit atómico, la medición muestra que el cuello sigue siendo la **frecuencia** de `run()`.
+- **Secundario (solo si tras medir sigue laggeando): rAF-coalescing.** Colapsar los `onChange` del picker a **como máximo un commit por frame** (throttle vía `requestAnimationFrame`) dentro de `rgb-color-control.tsx`. Reduce la frecuencia de `new Function`+eval sin tocar la arquitectura ni la fuente de verdad.
 
 ---
 
-## Bloque 2 — J-01 + J-02 · Motor audio + mic UI
+## Bloque 1 — G-09 · Perf del color picker nativo (fix corto)
 
-**Decisión:** encender audio **sin recrear** la instancia Hydra: `createHydraEvaluator` mantiene refs a `hydra` y expone `setAudioEnabled(enabled)` y `setFftVisible(visible)`. `setAudioEnabled(true)` hace **lazy init** (`if (!synth.a) hydra._initAudio()`), setea `hydra.detectAudio = true` y **re-ejecuta el código actual** (`run(lastCode, true)`) para rebindear `a`; `setAudioEnabled(false)` setea `detectAudio = false` y `synth.a?.hide()`. Se agrega `a: s.a` a la whitelist de `buildBoundFunctions`. Estado UI en `chain-store` (`audioEnabled`, `fftVisible`) cableado desde `hydra-canvas.tsx` con el **mismo patrón que `setSpeed`/`setBpm`** (useEffect por dependencia). Toggle mic + botón FFT en un componente nuevo **`audio-controls.tsx`** dentro de `param-panel.tsx` (junto a `GlobalFaders`).
+**Scope:** implementación real (fix S). No es spike.
+
+**Decisión:** implementar el **commit atómico multi-canal** como fix primario. Añadir `updateParams(instanceId, patch: Record<string, ParamValue>)` al store (una acción, un `set`, un `compileMultiChain`) y que `RgbColorControl.applyRgb` escriba los 3 canales de una sola vez a través de un único callback. **Medir antes y después.** Dejar el **rAF-coalescing preparado como paso opcional** que se activa solo si la medición post-atómico sigue mostrando lag perceptible.
+
 **Descartado:**
-- **Recrear el evaluador** al togglear mic (opción del spec Nivel 1): descarta el contexto WebGL, reflash y complejidad de re-hidratar `compiledCode`. La vía lazy-init es más limpia y ya está soportada por el runtime.
-- Meter el toggle dentro de `global-faders.tsx`: ese componente es de **faders** (`type=range`); un toggle mic es un botón → componente propio para no mezclar responsabilidades.
-- Incluir `audioEnabled`/`fftVisible` en el **snapshot de undo** (`ChainSnapshot`): un undo no debe re-disparar el prompt de permisos. Quedan **fuera** de `captureSnapshot`.
-- `setBins/scale/smooth/cutoff` en UI: es **J-04**, fuera de scope (queda `numBins:4` de `_initAudio`).
+- **Preview local + commit on `pointerup`** (backlog): `pointerup` no es fiable en el popup nativo del SO; agrega estado espejo y riesgo de desync con la fuente de verdad `pad.params`. Ver veredicto arriba.
+- **Debounce por tiempo (setTimeout Nms):** introduce latencia perceptible y "salto" al final; rAF es más natural para animación/drag si hiciera falta el secundario.
+- **Memoizar/cachear `compileMultiChain`:** más complejo y ataca el síntoma, no la causa (el 3× redundante). El commit atómico elimina la causa con menos código.
+- **Reescribir `run()` para no usar `new Function`:** fuera de scope (afecta todo el pipeline de evaluación, no solo el color); si la medición lo señala como cuello real, escalar y planificar aparte.
+
 **Archivos (rutas confirmadas):**
-- `lib/chain-evaluator.ts`
-  - `buildBoundFunctions` (L26–97): agregar `a: s.a`.
-  - Guardar `hydra` en el closure (ya existe, L111) y trackear `let lastCode = EMPTY_CODE` actualizado en `run()`.
-  - Interfaz `HydraEvaluator` (L10–23): añadir `setAudioEnabled(enabled: boolean): void` y `setFftVisible(visible: boolean): void`.
-  - Implementar: `setAudioEnabled` → `if (enabled) { if (!synth.a) hydra._initAudio(); hydra.detectAudio = true; run(lastCode, true) } else { hydra.detectAudio = false; synth.a?.hide() }`. `setFftVisible` → `enabled ? synth.a?.show() : synth.a?.hide()` (con guard si `!synth.a`).
 - `stores/chain-store.ts`
-  - Estado: `audioEnabled: boolean` (default `false`), `fftVisible: boolean` (default `false`).
-  - Acciones: `setAudioEnabled(v)`, `setFftVisible(v)` (set simple; **no** `pushHistory`).
-  - **No** agregarlos a `captureSnapshot` (L57–63) ni a `restoreSnapshot`.
-- `components/launchpad/hydra-canvas.tsx` — dos `useEffect` nuevos (patrón L83–91): `[audioEnabled, isReady]` → `evaluatorRef.current?.setAudioEnabled(audioEnabled)`; `[fftVisible, isReady]` → `setFftVisible(fftVisible)`. Leer `audioEnabled`/`fftVisible` del store.
-- `components/launchpad/audio-controls.tsx` **(nuevo)** — botón "Mic" (toggle `audioEnabled`) con indicador activo (privacidad) y botón "FFT" (toggle `fftVisible`, deshabilitado si `!audioEnabled`).
-- `components/launchpad/param-panel.tsx` — renderizar `<AudioControls />` (antes o después de `<GlobalFaders />`, L69).
+  - Interfaz `ChainState` (junto a `updateParam`, L241): declarar `updateParams: (instanceId: string, patch: Record<string, ParamValue>) => void`.
+  - Implementación (espejo de `updateParam` L705–714, un solo `set` + `updateChain`): fusionar todo el `patch` sobre `s.params` en un único `map` → una sola `syncEditingView`/`compileMultiChain`.
+- `components/launchpad/rgb-color-control.tsx`
+  - `applyRgb` (L37–45): en vez de 3× `onChannelChange`, construir el `patch` `{ r, g, b }` (con `clamp` por canal según `mode`) y emitirlo en **una** llamada.
+  - Prop nueva sugerida `onChannelsChange(patch: Record<RgbChannel, number>)` (o renombrar la existente); mantener compat si algún otro caller usa `onChannelChange` por canal.
+- `components/launchpad/pad-param-panel.tsx`
+  - Wiring de `<RgbColorControl>` (L100–106): pasar el commit atómico `onChannelsChange={(patch)=>updateParams(pad.instanceId, patch)}` (obtener `updateParams` del store como se obtiene `updateParam` en L20).
+- **(Medición, temporal — quitar antes del commit):** instrumentar `updateParam`/`updateParams` o `compileMultiChain` con `console.count`/`performance.now`, o usar React DevTools Profiler / Chrome Performance trace durante un drag del picker, para contar llamadas y ms por evento **antes vs después**.
+
 **Pasos:**
-- [x] Whitelist: `a: s.a` en `buildBoundFunctions` + track `lastCode` en `run()`.
-- [x] Métodos `setAudioEnabled`/`setFftVisible` en el evaluador (lazy `_initAudio`, flag, re-run).
-- [x] Estado `audioEnabled`/`fftVisible` + acciones en `chain-store` (fuera de undo).
-- [x] `useEffect` de cableado en `hydra-canvas.tsx`.
-- [x] `audio-controls.tsx` + montaje en `param-panel.tsx`.
-- [x] Probar con favorito/código `osc(10,0.1,()=>a.fft[0]*4).out()`.
+- [x] **Medir baseline:** contar `updateParam` y ms de `compileMultiChain` por evento durante un drag del picker (nota breve con los números).
+- [x] Agregar `updateParams(instanceId, patch)` al store (un `set`, un compile).
+- [x] Cambiar `applyRgb` para emitir `{r,g,b}` en una sola llamada; wirear `updateParams` en el panel.
+- [x] **Re-medir:** confirmar que el compile por evento pasó de 3× a 1× y que el drag se siente fluido.
+- [x] Si sigue laggeando: agregar rAF-coalescing del `onChange` del picker (máx. 1 commit/frame) y re-medir. *(No necesario: 3×→1× suficiente.)*
+- [x] Quitar toda la instrumentación temporal.
+
 **Criterio de hecho:**
-- [x] Mic **opt-in**: sin togglear, **no** hay pedido de permisos ni stream (default #10).
-- [x] Con mic activo, `a.fft` está disponible en el evaluador y una cadena con `()=>a.fft[0]*4` reacciona.
-- [x] Botón FFT muestra/oculta el visualizador (`a.show()/hide()`).
-- [x] Denegar permiso **no rompe** el canvas (sigue renderizando; sin datos FFT).
+- [x] Arrastrar el color picker nativo se siente fluido (sin stutter perceptible) en `solid` y `color`.
+- [x] Un evento `onChange` del picker produce **una sola** `compileMultiChain` (verificado por medición), no tres.
+- [x] HEX, picker y sliders siguen sincronizados (sin regresión de G-07); la fuente de verdad sigue siendo `pad.params`.
+- [x] `color` (multiplier) sigue clampando a [0,1] en picker/HEX; valores >1 solo por slider.
+- [x] Sin instrumentación temporal ni `console.*` en el diff final.
+
 **Tests manuales:**
-1. Cargar la app: DevTools → confirmar que **no** hay prompt de mic hasta tocar el toggle.
-2. Activar "Mic" → aceptar permiso → activar "FFT": aparece el meter abajo-derecha y responde al sonido.
-3. Pegar/activar un patch con `()=>a.fft[0]` (o favorito) hablando/con música: el visual reacciona.
-4. Recargar, activar "Mic" y **denegar**: el canvas sigue vivo; el meter no muestra datos (sin crash).
-5. Undo/redo con mic activo: **no** re-dispara el prompt de permisos.
+1. Pad `solid` → abrir params → **arrastrar** el picker rápido: el canvas sigue el color sin tirones; HEX y sliders r/g/b se actualizan.
+2. Pad `color` → arrastrar picker: fluido; el swatch clampa a [0,1] y no rompe.
+3. Escribir HEX `#44ff88` + Enter y mover un slider: siguen sincronizados (el commit atómico no rompió las otras vías).
+4. (Si se agregó rAF) soltar el picker: el color final queda **exacto** (el último frame se commitea, sin quedar "una posición atrás").
+
 **Riesgos:**
-- **Teardown de stream:** `Audio` no expone stop; al desactivar mic el stream **sigue vivo** (indicador del SO queda encendido). v1: solo `detectAudio=false` + `hide()`. Teardown real (`synth.a.stream?.getTracks().forEach(t=>t.stop())`) queda para J-04/polish — anotar como limitación conocida.
-- **Re-init duplicado:** llamar `_initAudio()` más de una vez anexa **otro** canvas (audio.js L41) y crea otro `AudioContext` (leak). El guard `if (!synth.a)` lo evita → **no** re-init en cada toggle.
-- Detección de permiso denegado: `Audio` no expone callback de error (solo `console.log`, L69). v1 no puede reflejar "denegado" en la UI con precisión → toggle queda optimista. **Gap** documentado.
-- `_initAudio` es API interna de `hydra-synth` (underscore): un upgrade podría romperlo. Fijar expectativa en `audio-reactivity.md`.
-- El canvas del meter puede aparecer aunque `isDrawing=false` (elemento anexado, transparente): si molesta, llamar `synth.a.hide()` inmediatamente tras `_initAudio()`.
-**Escalación:** si `hydra._initAudio()` no existe o falla en `1.4.0` (o el rebind de `a` no surte efecto tras `run(lastCode, true)`), **parar** y evaluar recrear el evaluador con `detectAudio:true` como plan B (avisar antes de cambiar el enfoque). No forzar `makeGlobal`.
-**Modelo sugerido:** **Composer** (S+S; cambios acotados siguiendo patrones existentes).
-**Commit:** `feat(audio): habilita microfono opt-in y visualizador fft`
+- **Último frame perdido con rAF:** si se agrega el coalescing, garantizar que el **valor final** del drag se commitea (flush en el último evento / on blur), o el color queda ligeramente desfasado.
+- **Regresión de sync:** el commit atómico debe fusionar sobre `s.params` **sin pisar** otros params del pad (usar spread `{ ...s.params, ...patch }`), igual que hace `updateParam` con un solo campo.
+- **`updateParams` y undo:** `updateParam` hoy **no** hace `pushHistory` (los params están fuera del snapshot de undo, por diseño). `updateParams` debe seguir el **mismo** criterio (no `pushHistory`) para no cambiar el comportamiento de undo.
+- **Otros callers de `onChannelChange`:** si se renombra la prop, verificar que ningún otro componente la use (hoy solo `pad-param-panel.tsx`).
+
+**Escalación:** si la medición muestra que, con commit atómico **y** rAF, el cuello real es `run()`/`new Function` por frame (no el compile), **parar y re-planear**: optimizar el pipeline de evaluación es un bloque aparte (afecta a todo, no solo el color). Lección vigente: *"run() no es por frame"* — acá el drag sí fuerza `run()` por evento, distinto del caso de animación por arrow.
+
+**Modelo sugerido:** **Composer** (S; cambio acotado que espeja un patrón existente + medición).
+
+**Commit:** `fix(params): evita recompilaciones al arrastrar el color picker`
 
 ---
 
-## Bloque 3 — J-03 · Modo audio ♪ en `ParamValue`
+## Bloque 2 — G-08 · Spike: color por swatches / paleta (SOLO SPIKE)
 
-**Decisión:** extender `ParamValue` con una tercera variante `{ kind: "audio", bin, scale, offset }`, **paralela** a `fn`, imitando el pipeline de `fn(time)`: el compilador delega en `emitParamExpression`, que emite una arrow **guardada** `() => (a && a.fft ? a.fft[bin] : 0) * scale + offset`. El guard degrada a valor base (offset) sin mic/`a` sin lanzar error. UI: tercer botón **♪** en `SingleParamSlider` junto a `#`/`fn`, con selector de `bin` (0…3) + sliders `scale`/`offset` (layout espejo del modo fn). Bins fijos en **4** (constante `DEFAULT_AUDIO_BINS`, coincide con `numBins:4` de `_initAudio`).
-**Descartado:**
-- Emitir `a.fft[bin]` **sin guard**: si `a`/`fft` no existen (mic off) rompe la cadena. Se emite siempre con guard (spec criterio: degrada a valor base).
-- Cambiar la firma del compilador: `chain-compiler.ts` ya delega en `emitParamExpression` (L37, L52, L71–72) → **no** necesita tocarse.
-- Modo ♪ por **teclado** (3-way `#`/`fn`/`♪`): el toggle keyboard actual (`toggleFocusedParamMode`, chain-store L419–458) es 2-way #↔fn. v1: ♪ **solo por UI**; el atajo sigue #↔fn. Extender el keyboard queda para polish.
-- Selector dinámico de bins según `a.setBins`: es J-04. v1 fija 4.
-**Archivos (rutas confirmadas):**
-- `lib/param-value.ts`
-  - `interface ParamAudioValue { kind: "audio"; bin: number; scale: number; offset: number }`; `export type ParamValue = number | ParamFnValue | ParamAudioValue`.
-  - `DEFAULT_AUDIO_VALUE` (`{ kind:"audio", bin:0, scale:1, offset:0 }`) y `DEFAULT_AUDIO_BINS = 4`.
-  - `isParamAudio(v)` (guard).
-  - `scalarPreview` (L31–34): rama audio → `return value.offset`.
-  - `normalizeParamValue` (L37–41): reconocer `isParamAudio` y devolver tal cual (clave para favoritos).
-  - `emitParamExpression` (L44–63): rama audio → `` `() => (a && a.fft ? a.fft[${bin}] : 0) * ${scale} + ${offset}` `` con redondeo a 4 decimales en `scale`/`offset` (patrón L50–52).
-- `lib/launchpad-controls.ts`
-  - `paramControl` value (L45): `isParamFn(value) ? value.offset : (isParamAudio(value) ? value.offset : value)` (evita `[object Object]`).
-  - `buildControlList`: v1 **no** agrega sub-controles de bin/scale al keyboard (solo el control base con offset). Anotar si se decide exponerlos.
-- `components/launchpad/param-slider.tsx`
-  - Botón **♪** junto a `#`/`fn` (L105–142). Toggle: fijo→audio usa `offset = valor actual`.
-  - Render del modo audio (espejo del bloque fn L145–202): botones de `bin` 0…`DEFAULT_AUDIO_BINS-1` + sliders `scale` (rango tipo `FN_FIELD_RANGES.amp`) y `offset`.
-- `stores/chain-store.ts`
-  - `restoreFromFavorite` (L845–857): ya usa `normalizeParamValue`; con el guard nuevo, el modo audio persiste. Verificar que `p.params` audio pase el `Object.entries` sin romper.
-  - Auditar `setControlNormalized` (L365–417: `typeof current !== "number"` ya cubre audio → set `.offset` OK), `toggleFocusedParamMode` (L419–458: rama `typeof current === "number"` → a fn; si `current` es audio, hoy lo pasaría a `.offset` número — aceptable, el atajo saca de ♪ a escalar), `cycleFocusedFnShape` (L485–516: `isParamFn` guard → no-op en audio, OK).
-- `lib/chain-compiler.ts` — **sin cambios** (delega en `emitParamExpression`).
+**Scope:** **SOLO SPIKE / NO UI.** Entregable = **nota de investigación + recomendación go/no-go**. **No** se construye la paleta ni se instala ninguna librería en este bloque. La implementación real de swatches queda para un **bloque posterior** condicionado al resultado de este spike.
+
+**Decisión:** producir una **nota comparativa** (en `docs/planning/param-panel-redesign.md`, sección nueva "G-08 spike swatches", o `docs/planning/color-swatches-spike.md` si el implementer prefiere separarlo) que evalúe **librería ligera vs grid custom** para elegir color desde una **paleta de swatches** (no un picker HSV completo), con **recomendación explícita go/no-go** y, si es go, cuál de las dos vías.
+
+**Descartado (dentro del spike):**
+- **Construir la paleta ahora:** viola el scope de spike. Solo investigación + decisión.
+- **Reemplazar el picker nativo de G-07:** el nativo es aceptable como v1 (feedback). Los swatches **se suman**, no reemplazan.
+- **Datos de peso inventados:** cualquier métrica de bundle/a11y debe **verificarse en el spike** (bundlephobia + repo real), no darse por cerrada acá.
+
+**Criterios a comparar (matriz del spike):**
+| Criterio | Qué medir |
+| --- | --- |
+| **Peso bundle** | KB gzipped del subcomponente **realmente importado** (tree-shaking), no del paquete entero. Verificar en bundlephobia. |
+| **API / control** | ¿Emite HEX / rgb que mapea limpio a `hexToRgb` (`lib/color-param.ts`) y al **commit atómico `updateParams`** por canal (r,g,b)? ¿Swatches configurables (nuestra paleta)? |
+| **a11y** | Navegación por teclado, roles/ARIA, foco visible — sin chocar con `isEditableTarget` (`use-launchpad-keys.ts`) ni con los atajos 1–5/Z. |
+| **Dark UI** | ¿Themeable a la estética del panel (bordes `white/10`, mono, dark) sin pelear con estilos propios del lib? |
+| **Integración modelo G-07** | Encaja con `mode: "unit"` (solid) vs `mode: "multiplier"` (color, clamp [0,1]) y con `colorInput` del registry. |
+| **Mantenimiento** | Dependencias, actividad del repo, tipos TS, riesgo de upgrade. |
+
+**Candidatas a investigar (métricas a VERIFICAR en el spike — no cerradas):**
+- **Grid custom** (baseline): botones de swatch propios (~pocas líneas), escriben vía `updateParams` atómico; **0 KB** de dependencia, control total de a11y/dark UI. Para *swatches puros* suele ser suficiente — el spike debe justificar si vale la pena un lib.
+- **`react-colorful`**: reputado ~2,8–3,1 KB gzip, sin deps, hooks, tree-shakeable (WebSearch 2026 — verificar). **No** trae componente de swatches nativo (habría que construirlos sobre sus primitivas) → para *solo swatches* aporta poco frente al grid custom.
+- **`@uiw/react-color`** (`@uiw/react-color-swatch`): trae componente de swatches drop-in; el subpaquete rondaría ~25 KB unpacked (verificar gzip real importado). Evaluar si el peso se justifica vs grid custom.
+> Nota: los números de arriba vienen de una búsqueda web de referencia y **deben confirmarse en el spike** (bundlephobia + prueba de import real). No instalar nada para "probar" fuera del spike.
+
+**Archivos (solo doc):**
+- `docs/planning/param-panel-redesign.md` — sección nueva "G-08 — Spike swatches (nota + go/no-go)". (O `docs/planning/color-swatches-spike.md` nuevo, kebab-case.)
+- `tasks/backlog.md` — al cerrar, reflejar el resultado en la fila G-08 (ver Review). **No** marcar G-08 como `done` salvo que el go/no-go quede cerrado; si el resultado es "go", abrir el ítem de implementación (nuevo ID o nota en G-08).
+
 **Pasos:**
-- [x] Extender `param-value.ts` (tipo, guard, defaults, `scalarPreview`, `normalizeParamValue`, `emitParamExpression`).
-- [x] Ajustar `paramControl` en `launchpad-controls.ts` (offset de audio).
-- [x] UI ♪ en `param-slider.tsx` (toggle + bin + scale/offset).
-- [x] Auditar acciones del store que ramifican por tipo (lista arriba).
-- [x] Probar compilación, reacción en vivo y serialización de favorito.
+- [x] Verificar en bundlephobia el peso gzip **realmente importado** de las candidatas (react-colorful, @uiw/react-color-swatch) vs grid custom (0).
+- [x] Probar (en papel / sandbox mental, sin instalar en la app) el mapeo de cada opción a `hexToRgb` + `updateParams` atómico y a `mode` unit/multiplier.
+- [x] Chequear a11y (teclado/ARIA/foco) y themeabilidad dark de cada opción.
+- [x] Escribir la matriz comparativa + **recomendación go/no-go** (y si go, qué vía y con qué paleta inicial).
+- [x] Definir el alcance del bloque de implementación posterior (si aplica) para el backlog.
+
 **Criterio de hecho:**
-- [x] Cualquier param numérico alterna fijo / fn / **♪** (bin + scale + offset).
-- [x] Con mic (Bloque 2) la cadena reacciona; **sin** mic el modo ♪ degrada a `offset` sin error.
-- [x] Favoritos serializan el modo audio y **favoritos viejos** (número/fn) siguen restaurando bien.
-- [x] `chain-preview`/`compiledCode` muestran la arrow `() => (a && a.fft ? a.fft[i] : 0)*s+o`.
-**Tests manuales:**
-1. Pad `osc` → param `frequency` → botón ♪ → bin 0, scale 40, offset 10: con mic activo el visual pulsa con los graves.
-2. Desactivar mic: la cadena no rompe (frequency ≈ offset).
-3. Guardar favorito con un param en ♪ → recargar → restaurar: el param vuelve en modo ♪ con bin/scale/offset correctos.
-4. Restaurar un favorito **viejo** (sin audio): sin errores, params fijos/fn intactos.
-5. Con foco en un control ♪, `#`/`fn` por teclado: no crashea (sale de ♪ a escalar).
+- [x] Existe una nota con la **matriz** (peso, API, a11y, dark UI, integración, mantenimiento) para grid custom vs al menos 1 lib.
+- [x] Hay una **recomendación go/no-go explícita** y, si es go, la vía elegida y una paleta inicial propuesta.
+- [x] Ninguna métrica queda "inventada": cada dato de peso/a11y cita fuente o se marca verificado en el spike.
+- [x] **No** se agregó código de UI ni dependencias a la app en este bloque.
+
+**Tests manuales:** N/A (spike de investigación). Verificación = la nota responde go/no-go con datos verificables y el implementer/usuario puede decidir el siguiente bloque sin re-investigar.
+
 **Riesgos:**
-- `paramControl` sin la rama audio → `value` sería objeto → NaN en navegación por teclado. Cubierto arriba; **verificar**.
-- Si J-03 se implementa sin Bloque 2 (`a` no está en whitelist), la arrow lanza `ReferenceError` por `a` no declarado. **Dependencia dura de Bloque 2** — no mergear J-03 solo.
-- `bin` fuera de rango si en el futuro se bajan los bins (<4): el guard `a.fft[bin]` devuelve `undefined` → `undefined*scale = NaN`. Endurecer: `(a && a.fft && a.fft[bin] != null ? a.fft[bin] : 0)`.
-- UI: el modo audio agrega altura al panel (como fn); aceptable, no migrar a vertical acá (eso es G-06).
-**Escalación:** si Hydra **no** invoca la arrow por frame para ese parámetro (algún arg posicional que no acepta función), **parar**: verificar en `docs/hydra-skills-index/` / runtime antes de forzar. Lección existente: *"run() no es por frame"* — el que anima es la arrow, no un re-`run`.
-**Modelo sugerido:** **Opus** (M; toca tipos núcleo, compilador, store y UI; edge cases de serialización).
-**Commit:** `feat(audio): agrega modo audio por parametro con bin y scale`
+- **Scope creep:** la tentación de "ya que estoy, armo el grid". No: esto es solo la nota. Si el go es obvio y trivial (grid custom), igualmente **cerrar el spike** y abrir un bloque de implementación aparte.
+- **Métricas obsoletas:** pesos de libs cambian por versión — fechar la nota y linkear bundlephobia.
+- **a11y del picker nativo vs swatches:** los swatches propios heredan la responsabilidad de a11y que el nativo daba gratis; anotarlo como costo del "go custom".
+
+**Escalación:** si durante el spike aparece que los swatches requieren un modelo de "paletas guardadas / persistencia" (más allá de una paleta fija), **parar**: eso excede G-08 (se acerca a favoritos/preset) y necesita su propio ítem de backlog — no decidirlo dentro del spike.
+
+**Modelo sugerido:** **Composer** (spike de investigación + redacción de nota; sin código de app). Opus solo si el usuario quiere una comparación de arquitectura más profunda.
+
+**Commit:** `docs(params): nota spike de swatches de color (go/no-go)`
 
 ---
 
 ## Review (al cerrar sesión)
-- [ ] Actualizar estados en `backlog.md`: G-07, J-01, J-02, J-03 → `done` (o `in-progress` si parcial).
-- [ ] Mover decisiones #9 y #10 de "abiertas" a **Decisiones** con fecha en `backlog.md`.
-- [ ] Lecciones en `lessons.md` si hubo correcciones (ej. lazy `_initAudio`, guard de `a.fft`, teardown de stream).
-- [ ] Actualizar `docs/planning/audio-reactivity.md` (estado real: motor on, modo ♪ hecho; teardown pendiente) y `docs/hydra-skills-index/audio/audio.md` (quitar TODO de indexado FFT si se confirma).
-- [ ] Un commit por bloque cerrado.
+- [x] **G-09:** actualizar fila G-09 en `backlog.md` → `done` (con nota del fix atómico y números de medición); quitar/actualizar la línea de "Deuda conocida" (L432) sobre perf del picker.
+- [x] **G-08:** reflejar el resultado del spike en la fila G-08 de `backlog.md`. Si **go** → abrir ítem de implementación (nuevo ID o sub-nota) y dejar G-08 como spike cerrado; si **no-go** → anotar motivo. **No** marcar `done` por el planner (lo cierra el implementer/reviewer).
+- [x] Lecciones en `lessons.md` si hubo correcciones (p. ej. "commit atómico multi-canal para evitar N× compile en escrituras agrupadas"; "picker nativo `<input type=color>` no da `pointerup` fiable → coalescer por rAF, no por pointerup").
+- [x] Un commit por bloque cerrado (G-09 código; G-08 doc).
 
 ## Handoff
-Plan listo — bloques 1–3. Nuevo chat → `/hydra-implementer` → un bloque por sesión (o modo oleada 1→2→3 con commit entre cada uno). **Bloque 3 depende del Bloque 2** (no mergear J-03 sin `a` en whitelist).
+Plan listo — **Bloque 1 (G-09)** y **Bloque 2 (G-08)**. Nuevo chat → `/hydra-implementer`.
+- **G-09** = implementación real (commit atómico `updateParams`; medir antes/después; rAF solo si hace falta).
+- **G-08** = **SOLO SPIKE** (nota + go/no-go; sin UI ni dependencias).
+- Independientes; recomendado una sola oleada (G-09 → G-08). Branch sugerido `oleada/2026-07-31-color-followups` (o `main` si el usuario prefiere).

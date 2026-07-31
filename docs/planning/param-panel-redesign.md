@@ -143,6 +143,61 @@ colorInput?: {
 
 ---
 
+## G-08 — Spike swatches (nota + go/no-go)
+
+> **Fecha:** 2026-07-31 · **Estado:** spike cerrado · **Veredicto:** **GO — grid custom** (sin librería)
+
+### Contexto
+
+Feedback post-G-07: el picker nativo es aceptable como v1, pero conviene poder elegir color desde una **paleta de swatches** (no reemplaza picker/HEX/sliders — se suma). G-09 resolvió el lag del picker con `updateParams` atómico; los swatches deben usar el mismo commit `{ r, g, b }`.
+
+### Candidatas evaluadas
+
+| Criterio | **Grid custom** | **`react-colorful@5.6.1`** | **`@uiw/react-color-swatch@2.10.3`** |
+|----------|-----------------|------------------------------|--------------------------------------|
+| **Peso bundle (gzip)** | **0 B** | 4 655 B (entry `main`, picker completo) — [bundlephobia](https://bundlephobia.com/package/react-colorful@5.6.1) | 1 924 B (swatch) + 2 163 B (`@uiw/color-convert`, dep obligatoria) ≈ **4 087 B** — [swatch](https://bundlephobia.com/package/@uiw/react-color-swatch@2.10.3) · [convert](https://bundlephobia.com/package/@uiw/color-convert@2.10.3) |
+| **API / control** | HEX en paleta → `hexToRgb` → `updateParams({r,g,b})` | **No trae swatches** — es picker HSV; para swatches puros no aporta | `colors[]` configurable; `onChange` emite `HsvaColor` → requiere `hsvaToHex` de `@uiw/color-convert` antes de `hexToRgb` |
+| **a11y** | Costo nuestro: `<button>` por swatch, `aria-label`, flechas opcionales | Picker con a11y documentada, pero **irrelevante** para swatches | `div` + `onClick`; sin teclado built-in; `rectRender` permite mejorar pero sigue siendo trabajo manual |
+| **Dark UI** | Control total (`border-white/10`, mono, tamaño táctil) | Estilos del picker HSV; no encaja con “solo swatch” | Theme vía `rectRender` / `rectProps`; estilos base del lib pueden pelear con el panel |
+| **Integración G-07** | Directa: `clampChannel` en `mode: multiplier`; misma fuente `pad.params` | N/A para swatches | Mapeo indirecto HSVA→HEX→RGB; duplica conversión que ya tenemos en `lib/color-param.ts` |
+| **Mantenimiento** | 0 deps; ~40–60 LOC en `rgb-color-control` o subcomponente | Dep estable (0 deps propias) pero **sobredimensionado** para el caso | +2 paquetes scoped, peer `@babel/runtime`; activo (250k dl/sem) pero peso ≈ picker completo de react-colorful sin ventaja clara |
+
+### Mapeo a modelo G-07 (verificado en papel)
+
+```
+click swatch (#RRGGBB)
+  → hexToRgb(hex)           // lib/color-param.ts
+  → clamp por mode          // multiplier → [0,1]
+  → updateParams(id, {r,g,b})  // un compile (G-09)
+```
+
+Convive con HEX, picker nativo y sliders; no introduce estado espejo.
+
+### Recomendación
+
+| Veredicto | Vía | Motivo |
+|-----------|-----|--------|
+| **GO** | **Grid custom** | Swatches puros son botones con `backgroundColor`; 0 KB; API alineada con `hexToRgb` + `updateParams`; dark UI y a11y bajo control; las libs evaluadas no aportan valor proporcional al peso (~4 KB gzip cada una) ni eliminan trabajo de integración. |
+| **No-go** | `react-colorful` | Es un picker HSV, no swatches — G-07 ya cubre picker con `<input type=color>`. |
+| **No-go** | `@uiw/react-color-swatch` | Peso total comparable a un picker completo; conversión HSVA redundante; a11y/teclado igualmente a implementar; peer `@babel/runtime` extra. |
+
+### Paleta inicial propuesta (implementación posterior)
+
+Paleta fija VJ (~16 colores), grid 4×4 debajo del bloque HEX/picker:
+
+`#000000` `#ffffff` `#ff2056` `#e12afb` `#8e51ff` `#2b7fff` `#00b8db` `#00bc7d` `#5ea500` `#ff8904` `#fb64b6` `#00bcff` `#00d5be` `#9ae600` `#ffdf20` `#808080`
+
+(Inspirada en el demo oficial de `@uiw/react-color-swatch`; no implica usar el lib.)
+
+### Alcance bloque de implementación (G-10)
+
+- Sub-fila de swatches en `rgb-color-control.tsx` (o `color-swatch-grid.tsx` si supera ~60 LOC).
+- Solo `solid` y `color` (misma detección `colorInput` que G-07).
+- Sin persistencia de paletas custom (fuera de scope — escalaría a favoritos/preset).
+- Tests manuales: click swatch → canvas + HEX + sliders sincronizados; `color` clamp [0,1] en swatch.
+
+---
+
 ## Botones — mejoras concretas
 
 | Control | Hoy | Propuesta |
@@ -160,7 +215,7 @@ colorInput?: {
 - [ ] Contraste botones (fn, bypass, #)
 - [ ] Atajo `Enter` / `/` → focus input del control enfocado
 - [ ] A-02: copy bypass vs quitar cadena
-- [ ] **G-07:** HEX + color picker en `solid` / `color` (convive con sliders)
+- [x] **G-07:** HEX + color picker en `solid` / `color` (convive con sliders)
 
 ### Fase 2 — Primitiva `ParamFader`
 - [ ] Componente vertical reutilizable (pad params + globals)
