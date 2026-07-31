@@ -103,6 +103,17 @@ export function PadBand() {
     setGridView(!gridView)
   }, [gridView, setGridView])
 
+  const handleEditFocusedControl = useCallback(() => {
+    const { focusZone, focusedControlId } = useChainStore.getState()
+    if (focusZone !== "params" || !focusedControlId) return
+    const input = document.querySelector(
+      `[data-control-id="${focusedControlId}"] input`
+    ) as HTMLInputElement | null
+    if (!input) return
+    input.focus()
+    input.select()
+  }, [])
+
   useLaunchpadKeys({
     orderedSlots,
     focusZone,
@@ -137,6 +148,7 @@ export function PadBand() {
         .catch(() => {})
     },
     onRandomize: randomizePatch,
+    onEditFocusedControl: handleEditFocusedControl,
   })
 
   return (

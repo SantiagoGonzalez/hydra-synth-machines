@@ -61,6 +61,7 @@ interface LaunchpadKeyOptions {
   onToggleDetailBypass: () => void
   onCopyChain: () => void
   onRandomize: () => void
+  onEditFocusedControl: () => void
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -112,6 +113,7 @@ export function useLaunchpadKeys({
   onToggleDetailBypass,
   onCopyChain,
   onRandomize,
+  onEditFocusedControl,
 }: LaunchpadKeyOptions) {
   const pendingPressesRef = useRef(new Map<string, PendingPress>())
   const zHeldRef = useRef(false)
@@ -146,6 +148,7 @@ export function useLaunchpadKeys({
     onToggleDetailBypass,
     onCopyChain,
     onRandomize,
+    onEditFocusedControl,
   })
   optionsRef.current = {
     orderedSlots,
@@ -177,6 +180,7 @@ export function useLaunchpadKeys({
     onToggleDetailBypass,
     onCopyChain,
     onRandomize,
+    onEditFocusedControl,
   }
 
   useEffect(() => {
@@ -277,12 +281,23 @@ export function useLaunchpadKeys({
 
         if (event.code === "Enter") {
           if (isButton) return
+          if (optionsRef.current.focusZone === "params") {
+            event.preventDefault()
+            optionsRef.current.onEditFocusedControl()
+            return
+          }
           event.preventDefault()
           if (optionsRef.current.isSourceFocused && optionsRef.current.hasSourceDraft) {
             optionsRef.current.onApplySourceDraft()
           } else {
             optionsRef.current.onApplyArmed()
           }
+          return
+        }
+
+        if (event.code === "Slash") {
+          event.preventDefault()
+          optionsRef.current.onEditFocusedControl()
           return
         }
 

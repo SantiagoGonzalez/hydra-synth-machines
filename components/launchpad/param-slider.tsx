@@ -32,6 +32,7 @@ export function SingleParamSlider({
 }: ParamSliderProps) {
   const rafRef = useRef<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const cancelRef = useRef(false)
   const [draft, setDraft] = useState<string | null>(null)
   const isFn = isParamFn(value)
   const scalarVal = scalarPreview(value, param.default)
@@ -73,6 +74,10 @@ export function SingleParamSlider({
   const displayValue = Math.round(scalarVal * 1000) / 1000
 
   const commitDraft = useCallback(() => {
+    if (cancelRef.current) {
+      cancelRef.current = false
+      return
+    }
     if (draft === null || isFn) return
     const parsed = Number(draft)
     if (!Number.isNaN(parsed)) {
@@ -120,6 +125,12 @@ export function SingleParamSlider({
                 if (e.key === "Enter") {
                   e.preventDefault()
                   commitDraft()
+                  ;(e.target as HTMLInputElement).blur()
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault()
+                  cancelRef.current = true
+                  setDraft(null)
                   ;(e.target as HTMLInputElement).blur()
                 }
               }}
