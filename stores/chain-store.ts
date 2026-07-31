@@ -54,19 +54,38 @@ const MAX_UNDO_HISTORY = 5
 // Historia: toggleSlot, applyArmedSlot, removeSlot, toggleBypass, clearAll, updateSecondarySource.
 // Excluye sliders/params, setEditingOutput y navegación (no mutan la cadena).
 
-function pushHistory(
-  get: () => ChainState,
-  set: (partial: Partial<ChainState> | ((state: ChainState) => Partial<ChainState>)) => void
-) {
-  const state = get()
-  const snapshot: ChainSnapshot = {
+function captureSnapshot(state: Pick<ChainState, "chains" | "editingOutput" | "globalFaders">): ChainSnapshot {
+  return {
     chains: state.chains,
     editingOutput: state.editingOutput,
     globalFaders: state.globalFaders,
   }
+}
+
+function pushHistory(
+  get: () => ChainState,
+  set: (partial: Partial<ChainState> | ((state: ChainState) => Partial<ChainState>)) => void
+) {
+  const snapshot = captureSnapshot(get())
   set((s) => ({
     history: [...s.history, snapshot].slice(-MAX_UNDO_HISTORY),
+    redoStack: [],
   }))
+}
+
+function restoreSnapshot(
+  snapshot: ChainSnapshot,
+  gridView: boolean
+): Partial<ChainState> {
+  return {
+    chains: snapshot.chains,
+    editingOutput: snapshot.editingOutput,
+    globalFaders: snapshot.globalFaders,
+    armedSlotId: null,
+    selectedSlotId: null,
+    momentarySlotId: null,
+    ...syncEditingView(snapshot.chains, snapshot.editingOutput, null, gridView),
+  }
 }
 
 const EMPTY_CODE = "solid(0,0,0).out()"
@@ -185,6 +204,7 @@ interface ChainState {
   sourceDraftId: string | null
   globalFaders: GlobalFaderValues
   history: ChainSnapshot[]
+  redoStack: ChainSnapshot[]
 
   toggleSlot: (slotId: string) => void
   selectSlot: (slotId: string | null) => void
@@ -221,6 +241,7 @@ interface ChainState {
   applySourceDraft: () => void
   setGlobalFader: (faderId: GlobalFaderId, value: number) => void
   undo: () => void
+  redo: () => void
 }
 
 export const useChainStore = create<ChainState>((set, get) => ({
@@ -240,21 +261,29 @@ export const useChainStore = create<ChainState>((set, get) => ({
   sourceDraftId: null,
   globalFaders: getDefaultGlobalFaders(),
   history: [],
+  redoStack: [],
 
   undo: () => {
     const state = get()
     if (state.history.length === 0) return
+    const current = captureSnapshot(state)
     const snapshot = state.history[state.history.length - 1]
-    const nextHistory = state.history.slice(0, -1)
     set({
-      history: nextHistory,
-      chains: snapshot.chains,
-      editingOutput: snapshot.editingOutput,
-      globalFaders: snapshot.globalFaders,
-      armedSlotId: null,
-      selectedSlotId: null,
-      momentarySlotId: null,
-      ...syncEditingView(snapshot.chains, snapshot.editingOutput, null, state.gridView),
+      history: state.history.slice(0, -1),
+      redoStack: [...state.redoStack, current].slice(-MAX_UNDO_HISTORY),
+      ...restoreSnapshot(snapshot, state.gridView),
+    })
+  },
+
+  redo: () => {
+    const state = get()
+    if (state.redoStack.length === 0) return
+    const current = captureSnapshot(state)
+    const snapshot = state.redoStack[state.redoStack.length - 1]
+    set({
+      history: [...state.history, current].slice(-MAX_UNDO_HISTORY),
+      redoStack: state.redoStack.slice(0, -1),
+      ...restoreSnapshot(snapshot, state.gridView),
     })
   },
 

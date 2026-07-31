@@ -177,9 +177,23 @@ colorInput?: {
 
 ---
 
-## Spike G-03 (2026-07-31)
+## Spike G-03 (2026-07-31) — **descartado**
 
-**Alcance:** un solo param (el primero del pad activo) con fader vertical Radix; badge `pilot` en `pad-param-panel.tsx`. Resto del panel sin cambios.
+**Resultado:** piloto en un solo param (vertical) mezclado con el resto horizontal **no se ve bien** en uso real. Código revertido; faders verticales se implementarán con la **épica G** (G-04 primitiva + G-06 migración completa), no como spike aislado.
+
+**Hallazgos conservados (input para G-06):**
+
+| Pro | Contra |
+|-----|--------|
+| Radix `orientation="vertical"` viable sin deps nuevas | Un solo vertical entre horizontales rompe coherencia visual |
+| Mayor área táctil en columna alta | Modo fn sigue necesitando layout propio (sub-sliders horizontales) |
+| Encaja con mental model VJ desk | Panel completo vertical ≈ más scroll; no maximizar params visibles |
+
+**Siguiente paso:** G-04 primitiva `ParamFader` → migrar panel entero (G-06) en una sola pasada, no piloto parcial.
+
+---
+
+## Spike G-03 — notas técnicas (archivado)
 
 **Layout piloto (texto):**
 

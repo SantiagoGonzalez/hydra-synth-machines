@@ -50,7 +50,7 @@
 | C-01 | Editar cadena como código       | idea   | L        | Media      | Editor; sync con pads.                  |
 | C-02 | Live coding estilo Hydra        | idea   | L        | Media-baja | REPL vía `chain-evaluator.ts`.          |
 | C-03 | Overlay código sobre canvas     | idea   | S–M      | Media      | Toggle CSS; reutilizar `chain-preview`. |
-| C-04 | Undo cadena (Ctrl+Z, 5 niveles) | done   | M        | Alta       | Store + UI Ctrl/Cmd+Z (5 niveles, mutaciones estructurales). |
+| C-04 | Undo/redo cadena (Ctrl+Z/Y, 5 niveles) | done   | M        | Alta       | Store + UI Ctrl/Cmd+Z y Ctrl/Cmd+Y (o ⇧Z). |
 | C-05 | Copy/paste en ChainPreview      | done   | S–M      | Alta       | Copy en compact + Ctrl/Cmd+C en zona chain (fase 0). |
 
 
@@ -136,7 +136,7 @@
 | ---- | ------------------------------------------- | ------ | -------- | --------- | --------------------------------------------------------- |
 | G-01 | Tipografía y contraste (fn, valor, botones) | done   | S        | Alta      | param-slider + pad-param-panel (2026-07-31). |
 | G-02 | Atajo focus → input numérico                | done   | S        | Media     | `/` y `Enter` en zona params; `Escape` cancela edición.                       |
-| G-03 | Spike faders verticales                     | done   | M        | Alta      | Piloto en primer param (`param-fader.tsx`); hallazgos en planning doc. |
+| G-03 | Spike faders verticales                     | idea   | M        | Alta      | Piloto aislado descartado (2026-07-31); hacer con épica G/G-06. |
 | G-04 | Primitiva `ParamFader` compartida           | idea   | M        | Media     | Pad params + globals + proyección.                        |
 | G-05 | Number stepper (evaluar)                    | idea   | S–M      | Baja      | Tradeoffs en planning doc.                                |
 | G-06 | Migrar panel completo a vertical            | idea   | M–L      | Media     | Tras validar G-03.                                        |
@@ -340,7 +340,7 @@
 - [ ] D-02, D-03, D-06
 - [ ] C-03
 - [ ] D-05, H-04
-- [x] G-03 spike faders verticales (piloto primer param)
+- [ ] G-03 spike faders verticales (piloto descartado; pendiente con G-06)
 - [ ] D-07 PNG vía Hydra (opcional antes de D-08)
 
 

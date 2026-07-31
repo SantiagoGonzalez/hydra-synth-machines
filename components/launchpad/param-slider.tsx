@@ -18,7 +18,6 @@ interface ParamSliderProps {
   isFocusActive: boolean
   focusedControlId: string | null
   onChange: (value: ParamValue) => void
-  layout?: "horizontal" | "vertical"
 }
 
 export type { ParamSliderProps }
@@ -32,7 +31,6 @@ export function SingleParamSlider({
   isFocusActive,
   focusedControlId,
   onChange,
-  layout = "horizontal",
 }: ParamSliderProps) {
   const rafRef = useRef<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -91,15 +89,12 @@ export function SingleParamSlider({
     setDraft(null)
   }, [draft, onChange, param.max, param.min, isFn])
 
-  const isVertical = layout === "vertical" && !isFn
-
   return (
     <div
       ref={containerRef}
       data-control-id={controlId}
       className={cn(
         "flex flex-col gap-1 w-full rounded transition-shadow",
-        isVertical && "items-stretch",
         isFocusActive && focusedControlId === controlId && "ring-1 ring-inset ring-yellow-300/80"
       )}
     >
@@ -205,31 +200,6 @@ export function SingleParamSlider({
             </div>
           ))}
         </div>
-      ) : isVertical ? (
-        <SliderPrimitive.Root
-          className="relative flex h-28 touch-none select-none flex-col items-center w-full"
-          orientation="vertical"
-          min={param.min}
-          max={param.max}
-          step={param.step}
-          value={[scalarVal]}
-          onValueChange={handleScalarChange}
-        >
-          <SliderPrimitive.Track className="relative h-full w-1 grow rounded-full bg-white/10">
-            <SliderPrimitive.Range
-              className="absolute w-full rounded-full transition-none"
-              style={{ backgroundColor: color }}
-            />
-          </SliderPrimitive.Track>
-          <SliderPrimitive.Thumb
-            className={cn(
-              "block h-3 w-3 rounded-full border border-white/30 shadow",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/50",
-              "transition-transform hover:scale-110 active:scale-95"
-            )}
-            style={{ backgroundColor: color }}
-          />
-        </SliderPrimitive.Root>
       ) : (
         <SliderPrimitive.Root
           className="relative flex w-full touch-none select-none items-center h-4"

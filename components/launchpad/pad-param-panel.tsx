@@ -6,7 +6,6 @@ import { CATEGORY_COLORS, getFunctionDef } from "@/lib/hydra-registry"
 import { controlId } from "@/lib/launchpad-controls"
 import { SourceSelector } from "@/components/launchpad/source-selector"
 import { SingleParamSlider } from "@/components/launchpad/param-slider"
-import { ParamFader } from "@/components/launchpad/param-fader"
 import { useChainStore, type ActivePad } from "@/stores/chain-store"
 import { cn } from "@/lib/utils"
 
@@ -96,18 +95,19 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
 
       {hasMainParams && (
         <div className="flex flex-col gap-3">
-          {definition.params.map((param, index) => {
-            const sliderProps = {
-              param,
-              value: pad.params[param.name] ?? param.default,
-              color: mainColor,
-              controlId: controlId({
+          {definition.params.map((param) => (
+            <SingleParamSlider
+              key={param.name}
+              param={param}
+              value={pad.params[param.name] ?? param.default}
+              color={mainColor}
+              controlId={controlId({
                 kind: "param",
                 padId: pad.instanceId,
                 scope: "main",
                 paramName: param.name,
-              }),
-              fnControlIds: {
+              })}
+              fnControlIds={{
                 freq: controlId({
                   kind: "fn",
                   padId: pad.instanceId,
@@ -129,26 +129,12 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
                   paramName: param.name,
                   field: "offset",
                 }),
-              },
-              isFocusActive: focusZone === "params",
-              focusedControlId,
-              onChange: (value: Parameters<typeof updateParam>[2]) =>
-                updateParam(pad.instanceId, param.name, value),
-            }
-
-            if (index === 0) {
-              return (
-                <div key={param.name} className="relative">
-                  <span className="absolute top-0 right-0 font-mono text-[7px] text-white/25 uppercase tracking-wider z-10">
-                    pilot
-                  </span>
-                  <ParamFader {...sliderProps} />
-                </div>
-              )
-            }
-
-            return <SingleParamSlider {...sliderProps} />
-          })}
+              }}
+              isFocusActive={focusZone === "params"}
+              focusedControlId={focusedControlId}
+              onChange={(value) => updateParam(pad.instanceId, param.name, value)}
+            />
+          ))}
         </div>
       )}
 

@@ -45,8 +45,8 @@ export function PadBand() {
 
   const [activeCategory, setActiveCategory] = useState<HydraCategory>("source")
   const [isAddPadOpen, setIsAddPadOpen] = useState(false)
-  const [undoFlash, setUndoFlash] = useState(false)
-  const undoFlashTimerRef = useRef<number | null>(null)
+  const [historyFlash, setHistoryFlash] = useState<string | null>(null)
+  const historyFlashTimerRef = useRef<number | null>(null)
 
   const orderedSlots = useMemo(
     () => orderPadSlotsForCategory(padSlots, activeCategory),
@@ -116,19 +116,30 @@ export function PadBand() {
     input.select()
   }, [])
 
+  const showHistoryFlash = useCallback((label: string) => {
+    setHistoryFlash(label)
+    if (historyFlashTimerRef.current !== null) {
+      window.clearTimeout(historyFlashTimerRef.current)
+    }
+    historyFlashTimerRef.current = window.setTimeout(() => {
+      setHistoryFlash(null)
+      historyFlashTimerRef.current = null
+    }, 1200)
+  }, [])
+
   const handleUndo = useCallback(() => {
     const { history, undo } = useChainStore.getState()
     if (history.length === 0) return
     undo()
-    setUndoFlash(true)
-    if (undoFlashTimerRef.current !== null) {
-      window.clearTimeout(undoFlashTimerRef.current)
-    }
-    undoFlashTimerRef.current = window.setTimeout(() => {
-      setUndoFlash(false)
-      undoFlashTimerRef.current = null
-    }, 1200)
-  }, [])
+    showHistoryFlash("Undone")
+  }, [showHistoryFlash])
+
+  const handleRedo = useCallback(() => {
+    const { redoStack, redo } = useChainStore.getState()
+    if (redoStack.length === 0) return
+    redo()
+    showHistoryFlash("Redone")
+  }, [showHistoryFlash])
 
   useLaunchpadKeys({
     orderedSlots,
@@ -166,6 +177,7 @@ export function PadBand() {
     onRandomize: randomizePatch,
     onEditFocusedControl: handleEditFocusedControl,
     onUndo: handleUndo,
+    onRedo: handleRedo,
   })
 
   return (
@@ -173,9 +185,9 @@ export function PadBand() {
       <div className="shrink-0 flex items-center justify-between gap-3 px-3 py-2 border-b border-white/5">
         <PadTabBar activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
         <div className="flex items-center gap-1 shrink-0">
-          {undoFlash && (
+          {historyFlash && (
             <span className="font-mono text-[9px] text-white/40 uppercase tracking-wider px-1">
-              Undone
+              {historyFlash}
             </span>
           )}
           <button

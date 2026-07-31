@@ -63,6 +63,7 @@ interface LaunchpadKeyOptions {
   onRandomize: () => void
   onEditFocusedControl: () => void
   onUndo: () => void
+  onRedo: () => void
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -116,6 +117,7 @@ export function useLaunchpadKeys({
   onRandomize,
   onEditFocusedControl,
   onUndo,
+  onRedo,
 }: LaunchpadKeyOptions) {
   const pendingPressesRef = useRef(new Map<string, PendingPress>())
   const zHeldRef = useRef(false)
@@ -152,6 +154,7 @@ export function useLaunchpadKeys({
     onRandomize,
     onEditFocusedControl,
     onUndo,
+    onRedo,
   })
   optionsRef.current = {
     orderedSlots,
@@ -185,6 +188,7 @@ export function useLaunchpadKeys({
     onRandomize,
     onEditFocusedControl,
     onUndo,
+    onRedo,
   }
 
   useEffect(() => {
@@ -227,6 +231,16 @@ export function useLaunchpadKeys({
       ) {
         event.preventDefault()
         optionsRef.current.onUndo()
+        return
+      }
+
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        ((event.code === "KeyZ" && event.shiftKey) || (event.code === "KeyY" && !event.shiftKey))
+      ) {
+        event.preventDefault()
+        optionsRef.current.onRedo()
         return
       }
 
@@ -296,17 +310,18 @@ export function useLaunchpadKeys({
 
         if (event.code === "Enter") {
           if (isButton) return
+          if (optionsRef.current.isSourceFocused && optionsRef.current.hasSourceDraft) {
+            event.preventDefault()
+            optionsRef.current.onApplySourceDraft()
+            return
+          }
           if (optionsRef.current.focusZone === "params") {
             event.preventDefault()
             optionsRef.current.onEditFocusedControl()
             return
           }
           event.preventDefault()
-          if (optionsRef.current.isSourceFocused && optionsRef.current.hasSourceDraft) {
-            optionsRef.current.onApplySourceDraft()
-          } else {
-            optionsRef.current.onApplyArmed()
-          }
+          optionsRef.current.onApplyArmed()
           return
         }
 
