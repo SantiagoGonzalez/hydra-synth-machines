@@ -54,17 +54,24 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <span
-          className={cn(
-            "font-mono text-[11px] font-semibold",
-            isArmed && "text-yellow-400/90",
-            pad.isBypassed && "line-through opacity-50"
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span
+            className={cn(
+              "font-mono text-[11px] font-semibold",
+              isArmed && "text-yellow-400/90",
+              pad.isBypassed && "line-through opacity-50"
+            )}
+            style={!isArmed ? { color: mainColor } : undefined}
+          >
+            {definition.label}
+            {instanceLabel}
+          </span>
+          {isActiveSlot && (
+            <span className="font-mono text-[8px] text-white/35 tracking-wide">
+              B mute · ⇧⌫ remove
+            </span>
           )}
-          style={!isArmed ? { color: mainColor } : undefined}
-        >
-          {definition.label}
-          {instanceLabel}
-        </span>
+        </div>
         {isActiveSlot && (
           <button
             type="button"
@@ -75,7 +82,11 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
                 ? "border-amber-400/50 text-amber-300 bg-amber-400/10"
                 : "border-white/20 text-white/70 hover:text-white/90"
             )}
-            title={pad.isBypassed ? "Re-enable pad in chain" : "Bypass pad (B)"}
+            title={
+              pad.isBypassed
+                ? "Re-enable pad in chain (B)"
+                : "Mute in chain (keeps slot) (B)"
+            }
           >
             {pad.isBypassed ? "bypassed" : "bypass"}
           </button>
