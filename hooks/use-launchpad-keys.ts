@@ -62,6 +62,7 @@ interface LaunchpadKeyOptions {
   onCopyChain: () => void
   onRandomize: () => void
   onEditFocusedControl: () => void
+  onUndo: () => void
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -114,6 +115,7 @@ export function useLaunchpadKeys({
   onCopyChain,
   onRandomize,
   onEditFocusedControl,
+  onUndo,
 }: LaunchpadKeyOptions) {
   const pendingPressesRef = useRef(new Map<string, PendingPress>())
   const zHeldRef = useRef(false)
@@ -149,6 +151,7 @@ export function useLaunchpadKeys({
     onCopyChain,
     onRandomize,
     onEditFocusedControl,
+    onUndo,
   })
   optionsRef.current = {
     orderedSlots,
@@ -181,6 +184,7 @@ export function useLaunchpadKeys({
     onCopyChain,
     onRandomize,
     onEditFocusedControl,
+    onUndo,
   }
 
   useEffect(() => {
@@ -212,6 +216,17 @@ export function useLaunchpadKeys({
       ) {
         event.preventDefault()
         optionsRef.current.onCopyChain()
+        return
+      }
+
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.code === "KeyZ" &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
+        event.preventDefault()
+        optionsRef.current.onUndo()
         return
       }
 

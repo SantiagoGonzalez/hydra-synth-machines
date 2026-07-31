@@ -2,7 +2,7 @@
 
 // Banda inferior de pads: tabs por categoría, grilla 8×2 y controles globales
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useRef } from "react"
 import { Trash2, Shuffle } from "lucide-react"
 import { CATEGORIES, type HydraCategory } from "@/lib/hydra-registry"
 import { useChainStore } from "@/stores/chain-store"
@@ -45,6 +45,8 @@ export function PadBand() {
 
   const [activeCategory, setActiveCategory] = useState<HydraCategory>("source")
   const [isAddPadOpen, setIsAddPadOpen] = useState(false)
+  const [undoFlash, setUndoFlash] = useState(false)
+  const undoFlashTimerRef = useRef<number | null>(null)
 
   const orderedSlots = useMemo(
     () => orderPadSlotsForCategory(padSlots, activeCategory),
@@ -114,6 +116,20 @@ export function PadBand() {
     input.select()
   }, [])
 
+  const handleUndo = useCallback(() => {
+    const { history, undo } = useChainStore.getState()
+    if (history.length === 0) return
+    undo()
+    setUndoFlash(true)
+    if (undoFlashTimerRef.current !== null) {
+      window.clearTimeout(undoFlashTimerRef.current)
+    }
+    undoFlashTimerRef.current = window.setTimeout(() => {
+      setUndoFlash(false)
+      undoFlashTimerRef.current = null
+    }, 1200)
+  }, [])
+
   useLaunchpadKeys({
     orderedSlots,
     focusZone,
@@ -149,13 +165,19 @@ export function PadBand() {
     },
     onRandomize: randomizePatch,
     onEditFocusedControl: handleEditFocusedControl,
+    onUndo: handleUndo,
   })
 
   return (
     <section className="min-h-0 flex flex-col border-t border-white/5 bg-black/40">
       <div className="shrink-0 flex items-center justify-between gap-3 px-3 py-2 border-b border-white/5">
         <PadTabBar activeCategory={activeCategory} onCategoryChange={handleCategoryChange} />
-        <div className="flex gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
+          {undoFlash && (
+            <span className="font-mono text-[9px] text-white/40 uppercase tracking-wider px-1">
+              Undone
+            </span>
+          )}
           <button
             type="button"
             onClick={randomizePatch}
