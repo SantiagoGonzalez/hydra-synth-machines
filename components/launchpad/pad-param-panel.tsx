@@ -18,6 +18,7 @@ interface PadParamPanelProps {
 /** Presenta y actualiza los controles del pad seleccionado o armado. */
 export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
   const updateParam = useChainStore((state) => state.updateParam)
+  const updateParams = useChainStore((state) => state.updateParams)
   const updateSecondarySource = useChainStore((state) => state.updateSecondarySource)
   const updateSecondaryParam = useChainStore((state) => state.updateSecondaryParam)
   const toggleBypass = useChainStore((state) => state.toggleBypass)
@@ -102,7 +103,7 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
               mode={definition.colorInput.mode}
               values={pad.params}
               defaults={Object.fromEntries(definition.params.map((p) => [p.name, p.default]))}
-              onChannelChange={(channel, value) => updateParam(pad.instanceId, channel, value)}
+              onChannelsChange={(patch) => updateParams(pad.instanceId, patch)}
             />
           )}
           {definition.params.map((param) => (

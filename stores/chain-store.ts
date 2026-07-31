@@ -239,6 +239,7 @@ interface ChainState {
   togglePad: (functionId: string) => void
   toggleBypass: (instanceId: string) => void
   updateParam: (instanceId: string, paramName: string, value: ParamValue) => void
+  updateParams: (instanceId: string, patch: Record<string, ParamValue>) => void
   updateSecondarySource: (instanceId: string, sourceId: string) => void
   updateSecondaryParam: (instanceId: string, paramName: string, value: ParamValue) => void
   clearAll: () => void
@@ -707,6 +708,17 @@ export const useChainStore = create<ChainState>((set, get) => ({
       updateChain(state.chains, state.editingOutput, (chain) => {
         const padSlots = chain.padSlots.map((s) =>
           s.instanceId === instanceId ? { ...s, params: { ...s.params, [paramName]: value } } : s
+        )
+        return { padSlots, activePads: deriveActivePads(padSlots) }
+      }, state.armedSlotId, state.gridView, state.globalFaders)
+    )
+  },
+
+  updateParams: (instanceId, patch) => {
+    set((state) =>
+      updateChain(state.chains, state.editingOutput, (chain) => {
+        const padSlots = chain.padSlots.map((s) =>
+          s.instanceId === instanceId ? { ...s, params: { ...s.params, ...patch } } : s
         )
         return { padSlots, activePads: deriveActivePads(padSlots) }
       }, state.armedSlotId, state.gridView, state.globalFaders)

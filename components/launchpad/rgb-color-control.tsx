@@ -14,7 +14,7 @@ interface RgbColorControlProps {
   mode: ColorInputMode
   values: Record<string, ParamValue>
   defaults: Record<string, number>
-  onChannelChange: (channel: RgbChannel, value: number) => void
+  onChannelsChange: (patch: Record<RgbChannel, number>) => void
 }
 
 export function RgbColorControl({
@@ -22,7 +22,7 @@ export function RgbColorControl({
   mode,
   values,
   defaults,
-  onChannelChange,
+  onChannelsChange,
 }: RgbColorControlProps) {
   const cancelRef = useRef(false)
   const [hexDraft, setHexDraft] = useState<string | null>(null)
@@ -37,11 +37,9 @@ export function RgbColorControl({
   const applyRgb = useCallback(
     (nr: number, ng: number, nb: number) => {
       const clamp = (v: number) => (mode === "multiplier" ? Math.min(1, Math.max(0, v)) : v)
-      onChannelChange("r", clamp(nr))
-      onChannelChange("g", clamp(ng))
-      onChannelChange("b", clamp(nb))
+      onChannelsChange({ r: clamp(nr), g: clamp(ng), b: clamp(nb) })
     },
-    [mode, onChannelChange]
+    [mode, onChannelsChange]
   )
 
   const commitHexDraft = useCallback(() => {
