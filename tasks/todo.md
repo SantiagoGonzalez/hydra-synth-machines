@@ -170,13 +170,13 @@ Cerrar el resto de **Fase 0** (G-02, B-01) y dejar encaminada la **deuda** con d
 **Decisión:** spike con un solo control escalar en layout vertical; `param-fader.tsx` + integración en primer param de `pad-param-panel.tsx`; hallazgos en `param-panel-redesign.md`.
 **Descartado:** migrar todos los params; global-faders; stepper G-05; RGB.
 **Pasos:**
-- [ ] Crear `param-fader.tsx` con Radix Slider `orientation="vertical"`.
-- [ ] Integrar piloto en primer param escalar de `pad-param-panel.tsx` (badge "pilot").
-- [ ] Documentar hallazgos en `docs/planning/param-panel-redesign.md`.
+- [x] Crear `param-fader.tsx` con Radix Slider `orientation="vertical"`.
+- [x] Integrar piloto en primer param escalar de `pad-param-panel.tsx` (badge "pilot").
+- [x] Documentar hallazgos en `docs/planning/param-panel-redesign.md`.
 **Criterio de hecho:**
-- [ ] Un param escalar controlable con fader vertical funcional.
-- [ ] Navegación teclado existente no rota en el resto del panel.
-- [ ] Doc actualizado con recomendación go/no-go G-06.
+- [x] Un param escalar controlable con fader vertical funcional.
+- [x] Navegación teclado existente no rota en el resto del panel.
+- [x] Doc actualizado con recomendación go/no-go G-06.
 **Commit:** `feat(params): spike de fader vertical piloto (G-03)`
 
 ---

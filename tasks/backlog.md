@@ -1,6 +1,6 @@
 # Backlog launchpad — v0
 
-> Última actualización: 2026-07-31 (oleada bloques 1–5).
+> Última actualización: 2026-07-31 (oleada bloques 1–6).
 
 ## Leyenda
 
@@ -136,7 +136,7 @@
 | ---- | ------------------------------------------- | ------ | -------- | --------- | --------------------------------------------------------- |
 | G-01 | Tipografía y contraste (fn, valor, botones) | done   | S        | Alta      | param-slider + pad-param-panel (2026-07-31). |
 | G-02 | Atajo focus → input numérico                | done   | S        | Media     | `/` y `Enter` en zona params; `Escape` cancela edición.                       |
-| G-03 | Spike faders verticales                     | idea   | M        | Alta      | Un param piloto; panel alto > ancho.                      |
+| G-03 | Spike faders verticales                     | done   | M        | Alta      | Piloto en primer param (`param-fader.tsx`); hallazgos en planning doc. |
 | G-04 | Primitiva `ParamFader` compartida           | idea   | M        | Media     | Pad params + globals + proyección.                        |
 | G-05 | Number stepper (evaluar)                    | idea   | S–M      | Baja      | Tradeoffs en planning doc.                                |
 | G-06 | Migrar panel completo a vertical            | idea   | M–L      | Media     | Tras validar G-03.                                        |
@@ -340,7 +340,7 @@
 - [ ] D-02, D-03, D-06
 - [ ] C-03
 - [ ] D-05, H-04
-- [ ] G-03 spike faders verticales
+- [x] G-03 spike faders verticales (piloto primer param)
 - [ ] D-07 PNG vía Hydra (opcional antes de D-08)
 
 

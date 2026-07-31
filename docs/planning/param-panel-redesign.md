@@ -177,6 +177,61 @@ colorInput?: {
 
 ---
 
+## Spike G-03 (2026-07-31)
+
+**Alcance:** un solo param (el primero del pad activo) con fader vertical Radix; badge `pilot` en `pad-param-panel.tsx`. Resto del panel sin cambios.
+
+**Layout piloto (texto):**
+
+```
+┌─────────────────────────────┐
+│ frequency          [#][val] │  ← label + fn + input (igual que horizontal)
+│              pilot          │
+│            ┌──┐             │
+│            │██│  h-28       │  ← Radix Slider orientation=vertical
+│            │██│             │
+│            └──┘             │
+├─────────────────────────────┤
+│ sync  ────────────○         │  ← params 2+ siguen horizontales
+│ offset ───────────○         │
+└─────────────────────────────┘
+```
+
+**Implementación:** `param-fader.tsx` envuelve `SingleParamSlider` con `layout="vertical"` (solo afecta modo escalar; modo fn conserva sub-sliders horizontales).
+
+### Pros observados
+
+| Pro | Detalle |
+|-----|---------|
+| Radix vertical viable | Mismo primitivo `@radix-ui/react-slider`; sin dependencia nueva |
+| Área táctil mayor | `h-28` (~112px) vs track horizontal `h-4` |
+| Coherencia VJ desk | Encaja con columna alta del param panel |
+| API compartida | `ParamFader` reutiliza header, fn toggle, input numérico y `onChange` del store |
+| Teclado intacto | `data-control-id`, foco ↑↓ y ←→ nudge sin cambios en el piloto |
+
+### Contras observados
+
+| Contra | Detalle |
+|--------|---------|
+| Altura por param | Un fader vertical ≈ +80px vs slider horizontal; panel completo requeriría más scroll |
+| Modo fn híbrido | Si el primer param está en fn, el piloto muestra 3 sub-sliders horizontales (no vertical) — layout inconsistente en ese edge case |
+| Mezcla visual | Primer param vertical + resto horizontal se siente transitorio (esperado en spike) |
+| Globals sin alinear | `global-faders.tsx` sigue horizontal nativo (`input type=range`) |
+
+### Recomendación G-06 (migración panel completo)
+
+**Go condicional** — proceder a G-04/G-06 si:
+
+1. Se extrae primitiva `ParamFader` compartida (pad + globals) con altura configurable.
+2. Modo fn del primer param tiene layout dedicado (p.ej. colapsar sub-sliders o drawer).
+3. Se acepta ~1.5–2× scroll en panel con muchos params.
+
+**No-go inmediato** si el objetivo es maximizar params visibles sin scroll — los faders verticales consumen altura.
+
+**Siguiente paso sugerido:** G-04 primitiva compartida → piloto en 2–3 params + un global (speed) antes de G-06.
+
+---
+
 ## Decisiones abiertas
 
 1. ¿Fn en modo escalar muestra solo botón, o también preview de la curva?
