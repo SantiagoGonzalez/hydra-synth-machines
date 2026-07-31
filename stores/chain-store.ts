@@ -42,6 +42,33 @@ export interface OutputChain {
   activePads: ActivePad[]
 }
 
+/** Snapshot inmutable por referencia para undo de mutaciones estructurales de cadena */
+interface ChainSnapshot {
+  chains: Record<OutputBuffer, OutputChain>
+  editingOutput: OutputBuffer
+  globalFaders: GlobalFaderValues
+}
+
+const MAX_UNDO_HISTORY = 5
+
+// Historia: toggleSlot, applyArmedSlot, removeSlot, toggleBypass, clearAll, updateSecondarySource.
+// Excluye sliders/params, setEditingOutput y navegación (no mutan la cadena).
+
+function pushHistory(
+  get: () => ChainState,
+  set: (partial: Partial<ChainState> | ((state: ChainState) => Partial<ChainState>)) => void
+) {
+  const state = get()
+  const snapshot: ChainSnapshot = {
+    chains: state.chains,
+    editingOutput: state.editingOutput,
+    globalFaders: state.globalFaders,
+  }
+  set((s) => ({
+    history: [...s.history, snapshot].slice(-MAX_UNDO_HISTORY),
+  }))
+}
+
 const EMPTY_CODE = "solid(0,0,0).out()"
 
 function initPadSlots(): PadSlot[] {
@@ -157,6 +184,7 @@ interface ChainState {
   focusedControlId: string | null
   sourceDraftId: string | null
   globalFaders: GlobalFaderValues
+  history: ChainSnapshot[]
 
   toggleSlot: (slotId: string) => void
   selectSlot: (slotId: string | null) => void
@@ -192,6 +220,7 @@ interface ChainState {
   setSourceDraft: (sourceId: string | null) => void
   applySourceDraft: () => void
   setGlobalFader: (faderId: GlobalFaderId, value: number) => void
+  undo: () => void
 }
 
 export const useChainStore = create<ChainState>((set, get) => ({
@@ -210,6 +239,24 @@ export const useChainStore = create<ChainState>((set, get) => ({
   focusedControlId: null,
   sourceDraftId: null,
   globalFaders: getDefaultGlobalFaders(),
+  history: [],
+
+  undo: () => {
+    const state = get()
+    if (state.history.length === 0) return
+    const snapshot = state.history[state.history.length - 1]
+    const nextHistory = state.history.slice(0, -1)
+    set({
+      history: nextHistory,
+      chains: snapshot.chains,
+      editingOutput: snapshot.editingOutput,
+      globalFaders: snapshot.globalFaders,
+      armedSlotId: null,
+      selectedSlotId: null,
+      momentarySlotId: null,
+      ...syncEditingView(snapshot.chains, snapshot.editingOutput, null, state.gridView),
+    })
+  },
 
   selectSlot: (slotId) => {
     set({ selectedSlotId: slotId, focusedControlId: null, sourceDraftId: null })
@@ -452,6 +499,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   },
 
   toggleSlot: (slotId) => {
+    pushHistory(get, set)
     set((state) =>
       updateChain(state.chains, state.editingOutput, (chain) => {
         const padSlots = chain.padSlots.map((s) =>
@@ -470,6 +518,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   },
 
   toggleBypass: (instanceId) => {
+    pushHistory(get, set)
     set((state) =>
       updateChain(state.chains, state.editingOutput, (chain) => {
         const padSlots = chain.padSlots.map((s) =>
@@ -504,6 +553,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   },
 
   removeSlot: (slotId) => {
+    pushHistory(get, set)
     set((state) => {
       const chain = state.chains[state.editingOutput]
       const target = chain.padSlots.find((s) => s.instanceId === slotId)
@@ -587,6 +637,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   },
 
   updateSecondarySource: (instanceId, sourceId) => {
+    pushHistory(get, set)
     set((state) => {
       const secDef = getFunctionDef(sourceId)
       if (!secDef && !sourceId.startsWith("src:")) return state
@@ -622,6 +673,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   },
 
   clearAll: () => {
+    pushHistory(get, set)
     set((state) => {
       const chain = state.chains[state.editingOutput]
       const nextChain = {
@@ -682,6 +734,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   applyArmedSlot: () => {
     const { armedSlotId, editingOutput } = get()
     if (!armedSlotId) return
+    pushHistory(get, set)
     set((state) => {
       const result = updateChain(
         state.chains,
