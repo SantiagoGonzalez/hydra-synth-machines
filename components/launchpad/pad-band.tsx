@@ -131,6 +131,11 @@ export function PadBand() {
     onCycleFocusedFnShape: cycleFocusedFnShape,
     onFocusSourceControl: focusSourceControl,
     onToggleDetailBypass: toggleDetailBypass,
+    onCopyChain: () => {
+      navigator.clipboard
+        .writeText(useChainStore.getState().compiledCode)
+        .catch(() => {})
+    },
     onRandomize: randomizePatch,
   })
 

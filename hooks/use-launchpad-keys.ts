@@ -59,6 +59,7 @@ interface LaunchpadKeyOptions {
   onCycleFocusedFnShape: (delta: number) => void
   onFocusSourceControl: () => void
   onToggleDetailBypass: () => void
+  onCopyChain: () => void
   onRandomize: () => void
 }
 
@@ -109,6 +110,7 @@ export function useLaunchpadKeys({
   onCycleFocusedFnShape,
   onFocusSourceControl,
   onToggleDetailBypass,
+  onCopyChain,
   onRandomize,
 }: LaunchpadKeyOptions) {
   const pendingPressesRef = useRef(new Map<string, PendingPress>())
@@ -142,6 +144,7 @@ export function useLaunchpadKeys({
     onCycleFocusedFnShape,
     onFocusSourceControl,
     onToggleDetailBypass,
+    onCopyChain,
     onRandomize,
   })
   optionsRef.current = {
@@ -172,6 +175,7 @@ export function useLaunchpadKeys({
     onCycleFocusedFnShape,
     onFocusSourceControl,
     onToggleDetailBypass,
+    onCopyChain,
     onRandomize,
   }
 
@@ -194,6 +198,18 @@ export function useLaunchpadKeys({
       if (event.repeat || isEditableTarget(event.target)) return
       if (hasOpenOverlay()) return
       const isButton = isButtonTarget(event.target)
+
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.code === "KeyC" &&
+        !event.shiftKey &&
+        !event.altKey &&
+        optionsRef.current.focusZone === "chain"
+      ) {
+        event.preventDefault()
+        optionsRef.current.onCopyChain()
+        return
+      }
 
       if (event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
         const chainPosition = chainPositionForCode(event.code)

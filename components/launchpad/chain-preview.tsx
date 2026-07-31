@@ -68,21 +68,19 @@ export function ChainPreview({ compact = false }: { compact?: boolean }) {
           <span className="text-[9px] text-white/20 tabular-nums">
             {activePads.length} active
           </span>
-          {!compact && (
-            <button
-              type="button"
-              onClick={handleCopy}
-              className={cn(
-                "p-0.5 rounded transition-colors",
-                isCopied
-                  ? "text-green-400/80"
-                  : "text-white/20 hover:text-white/50"
-              )}
-              title="Copy compiled code"
-            >
-              {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleCopy}
+            className={cn(
+              "p-0.5 rounded transition-colors",
+              isCopied
+                ? "text-green-400/80"
+                : "text-white/20 hover:text-white/50"
+            )}
+            title="Copy compiled code"
+          >
+            {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          </button>
         </div>
       </div>
 
