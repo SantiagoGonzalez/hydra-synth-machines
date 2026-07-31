@@ -12,11 +12,19 @@ export interface HydraParam {
   step: number
 }
 
+export interface ColorInputDef {
+  channels: ("r" | "g" | "b")[]
+  alphaParam?: "a"
+  mode: "unit" | "multiplier"
+}
+
 export interface HydraFunctionDef {
   id: string
   label: string
   category: HydraCategory
   params: HydraParam[]
+  /** Grupo RGB para bloque HEX/picker (no heurística por nombre) */
+  colorInput?: ColorInputDef
   /** Para funciones de modulación/blend que requieren una fuente secundaria */
   secondarySourceId?: string
   description?: string
@@ -79,6 +87,7 @@ export const HYDRA_REGISTRY: HydraFunctionDef[] = [
     label: "solid",
     category: "source",
     description: "Solid color fill",
+    colorInput: { channels: ["r", "g", "b"], alphaParam: "a", mode: "unit" },
     params: [
       { name: "r", default: 0, min: 0, max: 1, step: 0.01 },
       { name: "g", default: 0, min: 0, max: 1, step: 0.01 },
@@ -174,6 +183,7 @@ export const HYDRA_REGISTRY: HydraFunctionDef[] = [
     label: "color",
     category: "color",
     description: "Channel remap / tint",
+    colorInput: { channels: ["r", "g", "b"], mode: "multiplier" },
     params: [
       { name: "r", default: 1, min: 0, max: 2, step: 0.01 },
       { name: "g", default: 0.5, min: 0, max: 2, step: 0.01 },

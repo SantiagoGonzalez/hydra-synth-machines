@@ -4,6 +4,7 @@
 
 import { CATEGORY_COLORS, getFunctionDef } from "@/lib/hydra-registry"
 import { controlId } from "@/lib/launchpad-controls"
+import { RgbColorControl } from "@/components/launchpad/rgb-color-control"
 import { SourceSelector } from "@/components/launchpad/source-selector"
 import { SingleParamSlider } from "@/components/launchpad/param-slider"
 import { useChainStore, type ActivePad } from "@/stores/chain-store"
@@ -95,6 +96,15 @@ export function PadParamPanel({ pad, isArmed = false }: PadParamPanelProps) {
 
       {hasMainParams && (
         <div className="flex flex-col gap-3">
+          {definition.colorInput && (
+            <RgbColorControl
+              channels={definition.colorInput.channels}
+              mode={definition.colorInput.mode}
+              values={pad.params}
+              defaults={Object.fromEntries(definition.params.map((p) => [p.name, p.default]))}
+              onChannelChange={(channel, value) => updateParam(pad.instanceId, channel, value)}
+            />
+          )}
           {definition.params.map((param) => (
             <SingleParamSlider
               key={param.name}
