@@ -167,11 +167,12 @@ export function HydraCanvas() {
 
       <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center justify-between px-3 py-1.5 bg-black/60 backdrop-blur-sm">
         <div className="flex items-center gap-1">
-          {OUTPUT_BUFFERS.map((buf) => (
+          {OUTPUT_BUFFERS.map((buf, i) => (
             <button
               key={buf}
               type="button"
               onClick={() => setEditingOutput(buf as OutputBuffer)}
+              title={`Output buffer ${buf} — edit chain (Shift+${i + 1})`}
               className={cn(
                 "font-mono text-[8px] px-1.5 py-0.5 rounded transition-colors uppercase",
                 editingOutput === buf
@@ -189,12 +190,15 @@ export function HydraCanvas() {
               "p-0.5 ml-1 rounded transition-colors",
               gridView ? "text-green-400/80" : "text-white/25 hover:text-white/50"
             )}
-            title="Toggle 2×2 grid view"
+            title="Toggle 2×2 grid view — show all output buffers (Shift+5)"
           >
             <LayoutGrid className="w-3 h-3" />
           </button>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div
+          className="flex items-center gap-1.5"
+          title={isReady ? "Synth active — rendering live" : "Synth initializing — WebGL setup"}
+        >
           {isReady ? (
             <div className="w-1.5 h-1.5 rounded-full bg-green-400/60" />
           ) : (

@@ -18,6 +18,10 @@ interface GlobalFaderProps {
 function GlobalFader({ fader, value, onChange, controlId: id, isFocusActive }: GlobalFaderProps) {
   const pct = ((value - fader.min) / (fader.max - fader.min)) * 100
   const containerRef = useRef<HTMLDivElement>(null)
+  const title =
+    fader.id === "speed"
+      ? "Speed — global Hydra time multiplier (affects fn(time) animations)"
+      : undefined
 
   useEffect(() => {
     if (isFocusActive) containerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
@@ -27,6 +31,7 @@ function GlobalFader({ fader, value, onChange, controlId: id, isFocusActive }: G
     <div
       ref={containerRef}
       data-control-id={id}
+      title={title}
       className={`flex flex-col gap-1 rounded transition-shadow ${isFocusActive ? "ring-1 ring-inset ring-yellow-300/80" : ""}`}
     >
       <div className="flex items-center justify-between gap-2">

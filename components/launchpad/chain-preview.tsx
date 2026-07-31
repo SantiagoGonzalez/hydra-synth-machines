@@ -63,7 +63,12 @@ export function ChainPreview({ compact = false }: { compact?: boolean }) {
       style={{ background: "rgba(0,0,0,0.6)" }}
     >
       <div className={cn("flex items-center justify-between", compact ? "mb-1" : "mb-2")}>
-        <span className="text-[9px] text-white/20 uppercase tracking-wider">Chain</span>
+        <span
+          className="text-[9px] text-white/20 uppercase tracking-wider"
+          title="Chain — ordered sequence of active pads compiled to Hydra code"
+        >
+          Chain
+        </span>
         <div className="flex items-center gap-2">
           <span className="text-[9px] text-white/20 tabular-nums">
             {activePads.length} active
@@ -77,7 +82,7 @@ export function ChainPreview({ compact = false }: { compact?: boolean }) {
                 ? "text-green-400/80"
                 : "text-white/20 hover:text-white/50"
             )}
-            title="Copy compiled code"
+            title="Copy compiled code — Hydra chain generated from active pads"
           >
             {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
           </button>
