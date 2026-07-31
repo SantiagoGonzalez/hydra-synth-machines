@@ -1,188 +1,177 @@
-# Todo — sesión 2026-07-31 (oleada post Fase 0 parcial)
+# Todo — sesión 2026-07-31 (oleada Fase 0b + 0c)
 
 > Plan: hydra-planner · [`priorizacion.md`](./priorizacion.md) · [`backlog.md`](./backlog.md)
-> **Estado:** listo para implementar (hydra-implementer). Double-check de bloques 1–4 con lectura real de código.
+> **Estado:** listo para implementar (hydra-implementer). Double-check con lectura real de código + fuente de `hydra-synth@1.4.0`.
 
 ---
 
 ## Objetivo del día
 
-Cerrar el resto de **Fase 0** (G-02, B-01) y dejar encaminada la **deuda** con dos spikes acotados (C-04 store, H-02 doc). Un commit por bloque, chat nuevo por bloque. Meta mínima: bloques **1–3**; **4** si el ritmo acompaña.
+Cerrar **Fase 0b** (G-07 RGB: HEX + picker + sliders) y **Fase 0c** (audio MVP: motor + mic UI + modo ♪ en params). Bloque 2 desbloquea al 3. Un commit por bloque, chat nuevo por bloque (o modo oleada 1→2→3 con commit entre cada uno).
 
-> **Nota de double-check (inconsistencias detectadas):**
-> - **C-04:** `priorizacion.md` lista "reorder pad" y "cambio de output" como disparadores de `pushHistory`. **No existe** acción de reorder en el store (el orden deriva de `activatedAt`) y el cambio de output es **navegación**, no mutación. Este plan los excluye (ver Bloque 3).
-> - **B-01:** los hints de bypass y `⇧⌫ remove` **ya existen** (A-02, `pad-param-panel.tsx` L69–73/L85). No re-crear; el subset se enfoca en lo que falta (output tabs, term "chain/compiled code").
-> - **H-02:** `docs/planning/hydra-globals.md` **ya contiene** opciones A/B/C y tabla por fader; el spike consolida en recomendación concreta, no re-deriva.
-> - El `todo.md` anterior era de la oleada ya cerrada (H-01/C-05/G-01/A-02 → done); se sobrescribe.
+> **Notas de double-check (hallazgos que cambian el plan):**
+> - **G-07:** hoy **no existe** detección de grupos RGB. `pad-param-panel.tsx` (L96–139) mapea `definition.params` 1:1 a `SingleParamSlider`. Hay que **introducir** la metadata `colorInput` en el registry y el render condicional; no hay patrón previo que imitar salvo `source-selector` (claridad).
+> - **J-01 (motor):** verificado en `node_modules/hydra-synth/src/hydra-synth.js`: `this.detectAudio` es **mutable** (L43), `_initAudio()` (L212) crea `this.synth.a = new Audio({numBins:4, parentEl: this.canvas.parentNode})`, y `tick()` (L427) hace `if(this.detectAudio===true) this.synth.a.tick()`. → **Se puede encender audio sin recrear la instancia Hydra** (lazy `_initAudio()` + flag). `_initAudio` es método interno (underscore): citarlo, no inventarlo; riesgo de cambio en upgrade.
+> - **J-02 (mic/FFT):** `Audio` (`src/lib/audio.js`) pide `getUserMedia({audio:true})` **en el constructor** (L48–49) → el prompt de permiso ocurre al primer `_initAudio()` (perfecto para opt-in). Anexa un canvas `100×80` abajo-derecha (L41); `show()/hide()` togglean `display` (L167–176). `fft` arranca en `[0,0,0,0]` (L142) → `a.fft[i]` es seguro aun sin datos. **No hay método de teardown del stream** (limitación, ver Bloque 2 Riesgos).
+> - **J-03:** patrón a imitar = `emitParamExpression` rama `fn` (`lib/param-value.ts` L53–62) que emite `({time}) => ...`. Favoritos serializan `params: Record<string, ParamValue>` como JSON plano; el modo audio persiste **solo si** `normalizeParamValue` (L37–41) lo reconoce al restaurar.
+> - **Teclado:** `isEditableTarget` (`hooks/use-launchpad-keys.ts` L69–74) ya excluye `INPUT` (salvo `type="range"`) y `SELECT` → los nuevos inputs HEX (`type="text"`) y picker (`type="color"`) quedan protegidos sin tocar el hook.
+> - Se sobrescribe el `todo.md` anterior (oleada G-02/C-04/B-01/H-02 → **done**).
 
 ---
 
-## Bloque 1 — G-02 · Atajo focus → input numérico
+## Bloque 1 — G-07 · RGB: HEX + color picker + sliders
 
-**Decisión:** activar la **edición inline del input numérico ya existente** (`param-slider.tsx` L112–128, solo en modo escalar) mediante `/` (Slash) como tecla primaria y `Enter` como secundaria, **solo** cuando `focusZone === "params"` y el control enfocado es escalar. El hook expone un callback nuevo `onEditFocusedControl()`; su implementación (en `pad-band.tsx`) hace foco por DOM sobre `[data-control-id="<focusedControlId>"] input` (patrón `querySelector` ya usado en el hook para overlays) y `.select()`. En modo `fn` no hay input → no-op natural.
+**Decisión:** modelar el grupo de color como **metadata declarativa** en el registry (`colorInput`) y renderizar un bloque compuesto nuevo `rgb-color-control.tsx` **encima** de los sliders r/g/b/a existentes, con `pad.params` como **única fuente de verdad**. HEX y picker escriben los tres canales vía `updateParam` (uno por canal); los sliders siguen bindeados a los mismos params → sincronización automática por re-render. Nombre del componente: **`components/launchpad/rgb-color-control.tsx`** (coincide con la spec `param-panel-redesign.md` L141). Utilidades de conversión en **`lib/color-param.ts`** (kebab-case).
 **Descartado:**
-- `Enter` como única tecla: choca con Apply armed/source (`use-launchpad-keys.ts` L278–287). Se usa `/` como primaria y `Enter` guardado por `focusZone`.
-- Registrar una función de foco desde `param-slider` hacia un store/ref global: más maquinaria; el `querySelector` sobre `data-control-id` (ya presente en L88) es mínimo y consistente.
-- Añadir un stepper o cambiar el slider (G-05/G-03): fuera de scope.
+- Detección por nombres de param (heurística `r/g/b`) en el componente: frágil (colisiona con `shift`, que tiene r/g/b pero **no** es sRGB). Se usa metadata explícita en el registry → `shift` no la declara y no muestra bloque color.
+- Modo excluyente (picker **o** sliders): la spec pide que **convivan** editando el mismo estado. No se hace toggle.
+- Alpha en HEX (`#RRGGBBAA`) y `a` en el picker: **fuera de v1** (decisión #9). El canal `a` de `solid` queda como slider normal debajo.
+- fn/audio por canal en el bloque color: fase posterior; v1 usa `scalarPreview` para el swatch y **sobrescribe a número** si el canal estaba en fn/audio al editar HEX/picker (spec criterio 3).
 **Archivos (rutas confirmadas):**
-- `hooks/use-launchpad-keys.ts` — añadir `onEditFocusedControl: () => void` a `LaunchpadKeyOptions` (L34–63) y a **ambos** `optionsRef` (L119–149 y L150–180). Handler: dentro del branch sin modificadores (L253), interceptar `event.code === "Slash"` → `preventDefault()` + `onEditFocusedControl()`. Para `Enter`: **antes** del `Enter` genérico (L278), si `focusZone === "params"` → `onEditFocusedControl()` y `return` (deja intacto Apply en pads/chain).
-- `components/launchpad/pad-band.tsx` — cablear `onEditFocusedControl` en la llamada a `useLaunchpadKeys`: leer `focusedControlId`/`focusZone` de `useChainStore.getState()`; si zona params, `document.querySelector('[data-control-id="'+id+'"] input')?.focus()` + `.select()`.
-- `components/launchpad/param-slider.tsx` — agregar cancelación con `Escape` en el `onKeyDown` del input (L119–125): `setDraft(null)` **sin** commit. Usar un `cancelRef`/flag para que el `onBlur={commitDraft}` (L118) no confirme el valor descartado.
+- `lib/hydra-registry.ts` — extender `HydraFunctionDef` (L15–23) con `colorInput?: { channels: ("r"|"g"|"b")[]; alphaParam?: "a"; mode: "unit" | "multiplier" }`. Setear en `solid` (L78–88): `{ channels:["r","g","b"], alphaParam:"a", mode:"unit" }`. En `color` (L173–182): `{ channels:["r","g","b"], mode:"multiplier" }`. **No** tocar `shift`.
+- `lib/color-param.ts` **(nuevo)** — `rgbToHex(r,g,b)` (canales 0–1 → `#RRGGBB`), `hexToRgb(hex)` (→ `{r,g,b}` en 0–1, valida `#RGB` y `#RRGGBB`, retorna `null` si inválido). En `mode:"multiplier"` el picker **clampa** a [0,1] (decisión #9); si algún canal >1, `rgbToHex` clampa para el swatch (hint opcional "clamped").
+- `components/launchpad/rgb-color-control.tsx` **(nuevo)** — props: `channels`, `mode`, valores actuales (números vía `scalarPreview`), `onChannelChange(channel, value)`. Render: swatch + `<input type="text">` HEX (draft + commit en Enter/blur, patrón de `param-slider.tsx` L119–140) + `<input type="color">`. Emite `updateParam` por canal.
+- `components/launchpad/pad-param-panel.tsx` — dentro de `hasMainParams` (L96), **antes** del `.map` de sliders (L98): si `definition.colorInput`, renderizar `<RgbColorControl>` conectado a `updateParam(pad.instanceId, ch, val)`. Los sliders r/g/b/a se siguen renderizando igual (sin regresión).
+- (doc) `skills/param-panel.skill.md` — anotar el contrato `colorInput` (opcional, si el implementer tiene margen).
 **Pasos:**
-- [x] `use-launchpad-keys.ts`: agregar `onEditFocusedControl` a la interfaz y a ambos `optionsRef`.
-- [x] `use-launchpad-keys.ts`: handler `/` (Slash) en el branch sin modificadores + guard `Enter` en `focusZone === "params"` antes del Enter genérico.
-- [x] `pad-band.tsx`: implementar `onEditFocusedControl` (foco por `data-control-id` + `.select()`), acotado a `focusZone === "params"`.
-- [x] `param-slider.tsx`: `Escape` cancela edición sin mutar (flag de cancelación que neutraliza `onBlur` commit).
+- [x] Agregar tipo `colorInput` a `HydraFunctionDef` y setearlo en `solid` y `color`.
+- [x] Crear `lib/color-param.ts` con `rgbToHex`/`hexToRgb` + validación + clamp multiplier.
+- [x] Crear `rgb-color-control.tsx` (swatch + HEX + picker; draft/commit; clamp).
+- [x] Render condicional en `pad-param-panel.tsx` (bloque arriba de sliders).
+- [x] Verificar sync bidireccional slider ↔ HEX ↔ picker en `solid` y `color`.
 **Criterio de hecho:**
-- [x] Con `focusZone === "params"` y slider escalar enfocado: `/` o `Enter` enfoca y selecciona el input numérico.
-- [x] `Escape` durante la edición restaura el valor previo sin mutar.
-- [x] `Enter` en zona pads/chain **sigue** aplicando armed/source (sin regresión).
-- [x] En modo `fn` (sin input), `/` no rompe nada (no-op).
+- [x] En `solid` y `color`: HEX, picker nativo y sliders muestran **el mismo color** y quedan sincronizados.
+- [x] Editar HEX/picker actualiza el canvas vía `updateParam` en los 3 canales.
+- [x] `color` (multiplier): picker/HEX clampan a [0,1]; valores >1 solo por slider (sin romper el swatch).
+- [x] Sliders por canal siguen funcionando (sin regresión); `a` de `solid` intacto.
+- [x] `shift` **no** muestra bloque HEX/picker.
 **Tests manuales:**
-1. Seleccionar `osc`, `P` (focus params), navegar con ↑↓ hasta un escalar; pulsar `/` → el valor queda editable y seleccionado; tipear un número + `Enter` aplica.
-2. Repetir y pulsar `Escape` mientras se edita → vuelve al valor anterior.
-3. Armar un pad (`Shift`+tecla), `Enter` en zona pads → aplica el armed (no abre edición).
+1. Activar pad `solid` → abrir params → escribir `#44ff88` + Enter: swatch, picker y sliders r/g/b se actualizan y el canvas cambia.
+2. Mover slider `g` en `solid`: HEX y picker reflejan el nuevo valor al instante.
+3. Activar pad `color` → subir slider `r` a 1.8: el swatch muestra clamp (no rompe); bajar por picker vuelve a ≤1.
+4. Activar pad `shift`: confirmar que **no** aparece el bloque color.
 **Riesgos:**
-- **Commit al blur:** `commitDraft` (L75–83) confirma en `onBlur`; el cierre captura el `draft` viejo, así que `setDraft(null)` async + `blur()` podría igual confirmar. Mitigar con `cancelRef.current = true` leído dentro de `commitDraft`.
-- Doble disparo de `Enter` (edición + Apply): el guard por `focusZone` y el `return` deben ir **antes** del Enter genérico.
-- `data-control-id` del contenedor incluye el input como descendiente; verificar el selector encuentra el `<input>` (no el div).
-**Escalación:** si `Enter` no puede aislarse limpiamente del Apply sin regresión, **parar** y dejar solo `/` (default seguro), anotando la limitación. No inventar nuevos bindings.
-**Modelo sugerido:** Composer.
-**Commit:** `feat(params): enfoca el input numérico con / y enter en zona params`
+- Canal en modo `fn`/`audio` (objeto, no número): el swatch usa `scalarPreview`; editar HEX/picker sobrescribe a número (pérdida silenciosa del fn de ese canal) → aceptable v1, documentar en tooltip/hint.
+- Redondeo 0–1 ↔ 0–255 puede "saltar" el último dígito del slider (`step 0.01`) — usar `Math.round` consistente en `color-param.ts`.
+- `<input type="color">` no soporta alpha → alpha de `solid` queda solo en slider (esperado, decisión #9).
+- Foco/atajos: confirmar que HEX y picker no roban `1–5`/`Z` (ya cubierto por `isEditableTarget`, pero test rápido).
+**Escalación:** si el sync entre tres vías genera loops de render o el draft de HEX pelea con el re-render del store, **parar y re-planear** el modelo de estado (posible draft local en el componente vs commit atómico). No introducir un store de color separado sin avisar.
+**Modelo sugerido:** **Opus** (M; componente nuevo + metadata + conversión con edge cases de clamp).
+**Commit:** `feat(params): agrega HEX y color picker para solid y color`
 
 ---
 
-## Bloque 2 — B-01 · Tooltips glosario (subset 5–8)
+## Bloque 2 — J-01 + J-02 · Motor audio + mic UI
 
-**Decisión:** agregar **solo `title=`** (patrón nativo ya usado en `chain-preview`, `hydra-canvas`, `param-panel`) con términos de `docs/glosario-hydra.md`, priorizando lo que **hoy no tiene tooltip**. Subset objetivo (5–8): (1) tabs de output o0–o3, (2) toggle grid 2×2 (enriquecer copy), (3) estado LIVE/INIT, (4) botón copy / "compiled code", (5) fader global SPEED, (6) chip/preview "chain". Reutilizar los términos exactos del glosario (Buffer/Output, Chain, Compiled code, Bypass).
+**Decisión:** encender audio **sin recrear** la instancia Hydra: `createHydraEvaluator` mantiene refs a `hydra` y expone `setAudioEnabled(enabled)` y `setFftVisible(visible)`. `setAudioEnabled(true)` hace **lazy init** (`if (!synth.a) hydra._initAudio()`), setea `hydra.detectAudio = true` y **re-ejecuta el código actual** (`run(lastCode, true)`) para rebindear `a`; `setAudioEnabled(false)` setea `detectAudio = false` y `synth.a?.hide()`. Se agrega `a: s.a` a la whitelist de `buildBoundFunctions`. Estado UI en `chain-store` (`audioEnabled`, `fftVisible`) cableado desde `hydra-canvas.tsx` con el **mismo patrón que `setSpeed`/`setBpm`** (useEffect por dependencia). Toggle mic + botón FFT en un componente nuevo **`audio-controls.tsx`** dentro de `param-panel.tsx` (junto a `GlobalFaders`).
 **Descartado:**
-- Componente Tooltip (Radix) nuevo: cambia el patrón por 5–8 hints; `title=` es suficiente y consistente. Si se pide UX más rica → backlog (B-02).
-- Re-crear hints de bypass / `⇧⌫ remove`: **ya existen** (A-02). Solo enriquecer copy si aporta, sin duplicar.
-- Tooltips en todo el registry o modal tutorial (F-01): fuera de scope.
+- **Recrear el evaluador** al togglear mic (opción del spec Nivel 1): descarta el contexto WebGL, reflash y complejidad de re-hidratar `compiledCode`. La vía lazy-init es más limpia y ya está soportada por el runtime.
+- Meter el toggle dentro de `global-faders.tsx`: ese componente es de **faders** (`type=range`); un toggle mic es un botón → componente propio para no mezclar responsabilidades.
+- Incluir `audioEnabled`/`fftVisible` en el **snapshot de undo** (`ChainSnapshot`): un undo no debe re-disparar el prompt de permisos. Quedan **fuera** de `captureSnapshot`.
+- `setBins/scale/smooth/cutoff` en UI: es **J-04**, fuera de scope (queda `numBins:4` de `_initAudio`).
 **Archivos (rutas confirmadas):**
-- `components/launchpad/hydra-canvas.tsx` — tabs output (L170–184) **sin `title`** → agregar p.ej. `title="Output buffer oN — edición (Shift+N)"`; estado LIVE/INIT (L197–206) → tooltip "synth activo"; grid ya tiene `title` (L192).
-- `components/launchpad/chain-preview.tsx` — botón copy ya tiene `title="Copy compiled code"` (L80); opcional: tooltip en el label "Chain" (L66) con la definición del glosario.
-- `components/launchpad/global-faders.tsx` — SPEED (post H-01): `title` con "multiplicador de velocidad (speed)". **Verificar** el archivo antes de editar (no leído en el plan).
-- Fuente de términos: `docs/glosario-hydra.md` (Buffer/Output L15/L32, Chain L14/L31, Compiled code L33, Bypass L37).
+- `lib/chain-evaluator.ts`
+  - `buildBoundFunctions` (L26–97): agregar `a: s.a`.
+  - Guardar `hydra` en el closure (ya existe, L111) y trackear `let lastCode = EMPTY_CODE` actualizado en `run()`.
+  - Interfaz `HydraEvaluator` (L10–23): añadir `setAudioEnabled(enabled: boolean): void` y `setFftVisible(visible: boolean): void`.
+  - Implementar: `setAudioEnabled` → `if (enabled) { if (!synth.a) hydra._initAudio(); hydra.detectAudio = true; run(lastCode, true) } else { hydra.detectAudio = false; synth.a?.hide() }`. `setFftVisible` → `enabled ? synth.a?.show() : synth.a?.hide()` (con guard si `!synth.a`).
+- `stores/chain-store.ts`
+  - Estado: `audioEnabled: boolean` (default `false`), `fftVisible: boolean` (default `false`).
+  - Acciones: `setAudioEnabled(v)`, `setFftVisible(v)` (set simple; **no** `pushHistory`).
+  - **No** agregarlos a `captureSnapshot` (L57–63) ni a `restoreSnapshot`.
+- `components/launchpad/hydra-canvas.tsx` — dos `useEffect` nuevos (patrón L83–91): `[audioEnabled, isReady]` → `evaluatorRef.current?.setAudioEnabled(audioEnabled)`; `[fftVisible, isReady]` → `setFftVisible(fftVisible)`. Leer `audioEnabled`/`fftVisible` del store.
+- `components/launchpad/audio-controls.tsx` **(nuevo)** — botón "Mic" (toggle `audioEnabled`) con indicador activo (privacidad) y botón "FFT" (toggle `fftVisible`, deshabilitado si `!audioEnabled`).
+- `components/launchpad/param-panel.tsx` — renderizar `<AudioControls />` (antes o después de `<GlobalFaders />`, L69).
 **Pasos:**
-- [x] `hydra-canvas.tsx`: `title` en los 4 tabs de output y en el indicador LIVE/INIT.
-- [x] `hydra-canvas.tsx`/`chain-preview.tsx`: revisar/enriquecer copy de grid y "chain/compiled code".
-- [x] `global-faders.tsx`: `title` en SPEED (confirmar estructura del archivo primero).
-- [x] Verificar coherencia de términos con `docs/glosario-hydra.md` (no cambiar los términos del glosario).
+- [x] Whitelist: `a: s.a` en `buildBoundFunctions` + track `lastCode` en `run()`.
+- [x] Métodos `setAudioEnabled`/`setFftVisible` en el evaluador (lazy `_initAudio`, flag, re-run).
+- [x] Estado `audioEnabled`/`fftVisible` + acciones en `chain-store` (fuera de undo).
+- [x] `useEffect` de cableado en `hydra-canvas.tsx`.
+- [x] `audio-controls.tsx` + montaje en `param-panel.tsx`.
+- [x] Probar con favorito/código `osc(10,0.1,()=>a.fft[0]*4).out()`.
 **Criterio de hecho:**
-- [x] 5–8 tooltips con términos del glosario visibles en hover, sin abrir doc externa.
-- [x] No se duplican los hints ya entregados por A-02.
-- [x] UI en inglés (el glosario es doc-facing en español; los `title` van en inglés como el resto).
+- [x] Mic **opt-in**: sin togglear, **no** hay pedido de permisos ni stream (default #10).
+- [x] Con mic activo, `a.fft` está disponible en el evaluador y una cadena con `()=>a.fft[0]*4` reacciona.
+- [x] Botón FFT muestra/oculta el visualizador (`a.show()/hide()`).
+- [x] Denegar permiso **no rompe** el canvas (sigue renderizando; sin datos FFT).
 **Tests manuales:**
-1. Hover sobre o0/o1/o2/o3 → aparece la explicación del buffer/output.
-2. Hover sobre el botón copy y el fader SPEED → tooltip claro.
-3. Ninguna regresión visual/layout (solo atributo `title`).
+1. Cargar la app: DevTools → confirmar que **no** hay prompt de mic hasta tocar el toggle.
+2. Activar "Mic" → aceptar permiso → activar "FFT": aparece el meter abajo-derecha y responde al sonido.
+3. Pegar/activar un patch con `()=>a.fft[0]` (o favorito) hablando/con música: el visual reacciona.
+4. Recargar, activar "Mic" y **denegar**: el canvas sigue vivo; el meter no muestra datos (sin crash).
+5. Undo/redo con mic activo: **no** re-dispara el prompt de permisos.
 **Riesgos:**
-- Inconsistencia de idioma: mantener `title` en inglés como el resto de la UI.
-- Duplicar términos ya visibles (bypass/remove) → revisar antes de escribir.
-- `global-faders.tsx` no fue leído; el implementer debe confirmar la estructura antes de tocar.
-**Escalación:** si el equipo prefiere Tooltip enriquecido (Radix) en vez de `title=`, es cambio de patrón → replanificar (sale del scope S de B-01).
-**Modelo sugerido:** Composer.
-**Commit:** `feat(web): agrega tooltips de glosario en outputs, chain y speed`
+- **Teardown de stream:** `Audio` no expone stop; al desactivar mic el stream **sigue vivo** (indicador del SO queda encendido). v1: solo `detectAudio=false` + `hide()`. Teardown real (`synth.a.stream?.getTracks().forEach(t=>t.stop())`) queda para J-04/polish — anotar como limitación conocida.
+- **Re-init duplicado:** llamar `_initAudio()` más de una vez anexa **otro** canvas (audio.js L41) y crea otro `AudioContext` (leak). El guard `if (!synth.a)` lo evita → **no** re-init en cada toggle.
+- Detección de permiso denegado: `Audio` no expone callback de error (solo `console.log`, L69). v1 no puede reflejar "denegado" en la UI con precisión → toggle queda optimista. **Gap** documentado.
+- `_initAudio` es API interna de `hydra-synth` (underscore): un upgrade podría romperlo. Fijar expectativa en `audio-reactivity.md`.
+- El canvas del meter puede aparecer aunque `isDrawing=false` (elemento anexado, transparente): si molesta, llamar `synth.a.hide()` inmediatamente tras `_initAudio()`.
+**Escalación:** si `hydra._initAudio()` no existe o falla en `1.4.0` (o el rebind de `a` no surte efecto tras `run(lastCode, true)`), **parar** y evaluar recrear el evaluador con `detectAudio:true` como plan B (avisar antes de cambiar el enfoque). No forzar `makeGlobal`.
+**Modelo sugerido:** **Composer** (S+S; cambios acotados siguiendo patrones existentes).
+**Commit:** `feat(audio): habilita microfono opt-in y visualizador fft`
 
 ---
 
-## Bloque 3 — C-04 (spike) · Undo cadena en el store (sin UI)
+## Bloque 3 — J-03 · Modo audio ♪ en `ParamValue`
 
-**Decisión:** agregar historial **por referencia** al store. Como `chains` se maneja de forma **inmutable** (`updateChain` hace spread y los updaters usan `.map`), un snapshot puede guardar la **referencia** actual de `chains` + `editingOutput` + `globalFaders` **sin deep clone**. `pushHistory()` se llama al **inicio** de las mutaciones estructurales elegidas (antes del `set`); `undo()` restaura el último snapshot y re-ejecuta `syncEditingView`. Stack máx **5** (descartar el más viejo). **Sin UI** (test por consola/DevTools).
+**Decisión:** extender `ParamValue` con una tercera variante `{ kind: "audio", bin, scale, offset }`, **paralela** a `fn`, imitando el pipeline de `fn(time)`: el compilador delega en `emitParamExpression`, que emite una arrow **guardada** `() => (a && a.fft ? a.fft[bin] : 0) * scale + offset`. El guard degrada a valor base (offset) sin mic/`a` sin lanzar error. UI: tercer botón **♪** en `SingleParamSlider` junto a `#`/`fn`, con selector de `bin` (0…3) + sliders `scale`/`offset` (layout espejo del modo fn). Bins fijos en **4** (constante `DEFAULT_AUDIO_BINS`, coincide con `numBins:4` de `_initAudio`).
 **Descartado:**
-- Deep clone del estado en cada snapshot: innecesario (el store nunca muta in-place). Guardar referencias es correcto y barato.
-- Centralizar `pushHistory` dentro de `updateChain`: lo comparten mutaciones que **no** deben historiar (`updateParam`/`updateSecondaryParam`). Se llama explícito en las acciones elegidas.
-- `pushHistory` en `updateParam`/`updateSecondaryParam`/nudge/`setGlobalFader`: ruidoso (decisión `priorizacion.md`: **no** snapshot en slider). Excluidos.
-- `pushHistory` en `setEditingOutput` (**corrección a priorizacion.md**): es navegación, no mutación; no debe historiarse. `undo()` revierte mutaciones, no cambios de vista.
-- `redo`: fuera de scope hoy (backlog lo ubica en la fase UI).
-**Mutaciones que disparan `pushHistory` (decisión del planner):** `toggleSlot`, `applyArmedSlot`, `removeSlot`, `toggleBypass`, `clearAll`, `updateSecondarySource`.
+- Emitir `a.fft[bin]` **sin guard**: si `a`/`fft` no existen (mic off) rompe la cadena. Se emite siempre con guard (spec criterio: degrada a valor base).
+- Cambiar la firma del compilador: `chain-compiler.ts` ya delega en `emitParamExpression` (L37, L52, L71–72) → **no** necesita tocarse.
+- Modo ♪ por **teclado** (3-way `#`/`fn`/`♪`): el toggle keyboard actual (`toggleFocusedParamMode`, chain-store L419–458) es 2-way #↔fn. v1: ♪ **solo por UI**; el atajo sigue #↔fn. Extender el keyboard queda para polish.
+- Selector dinámico de bins según `a.setBins`: es J-04. v1 fija 4.
 **Archivos (rutas confirmadas):**
-- `stores/chain-store.ts` — tipo `ChainSnapshot = { chains: Record<OutputBuffer, OutputChain>; editingOutput: OutputBuffer; globalFaders: GlobalFaderValues }`; estado `history: ChainSnapshot[]` (init `[]`); helper interno `pushHistory()` (lee `get()`, agrega snapshot, recorta a 5); acción `undo()` (pop → `set({ chains, editingOutput, globalFaders, ...syncEditingView(...) })`). Añadir `history` y `undo` a `ChainState` (interfaz L144–195) y al objeto `create` (L197+). Insertar `get().pushHistory?.()` al inicio de las 6 acciones listadas.
+- `lib/param-value.ts`
+  - `interface ParamAudioValue { kind: "audio"; bin: number; scale: number; offset: number }`; `export type ParamValue = number | ParamFnValue | ParamAudioValue`.
+  - `DEFAULT_AUDIO_VALUE` (`{ kind:"audio", bin:0, scale:1, offset:0 }`) y `DEFAULT_AUDIO_BINS = 4`.
+  - `isParamAudio(v)` (guard).
+  - `scalarPreview` (L31–34): rama audio → `return value.offset`.
+  - `normalizeParamValue` (L37–41): reconocer `isParamAudio` y devolver tal cual (clave para favoritos).
+  - `emitParamExpression` (L44–63): rama audio → `` `() => (a && a.fft ? a.fft[${bin}] : 0) * ${scale} + ${offset}` `` con redondeo a 4 decimales en `scale`/`offset` (patrón L50–52).
+- `lib/launchpad-controls.ts`
+  - `paramControl` value (L45): `isParamFn(value) ? value.offset : (isParamAudio(value) ? value.offset : value)` (evita `[object Object]`).
+  - `buildControlList`: v1 **no** agrega sub-controles de bin/scale al keyboard (solo el control base con offset). Anotar si se decide exponerlos.
+- `components/launchpad/param-slider.tsx`
+  - Botón **♪** junto a `#`/`fn` (L105–142). Toggle: fijo→audio usa `offset = valor actual`.
+  - Render del modo audio (espejo del bloque fn L145–202): botones de `bin` 0…`DEFAULT_AUDIO_BINS-1` + sliders `scale` (rango tipo `FN_FIELD_RANGES.amp`) y `offset`.
+- `stores/chain-store.ts`
+  - `restoreFromFavorite` (L845–857): ya usa `normalizeParamValue`; con el guard nuevo, el modo audio persiste. Verificar que `p.params` audio pase el `Object.entries` sin romper.
+  - Auditar `setControlNormalized` (L365–417: `typeof current !== "number"` ya cubre audio → set `.offset` OK), `toggleFocusedParamMode` (L419–458: rama `typeof current === "number"` → a fn; si `current` es audio, hoy lo pasaría a `.offset` número — aceptable, el atajo saca de ♪ a escalar), `cycleFocusedFnShape` (L485–516: `isParamFn` guard → no-op en audio, OK).
+- `lib/chain-compiler.ts` — **sin cambios** (delega en `emitParamExpression`).
 **Pasos:**
-- [x] Definir `ChainSnapshot` y agregar `history: ChainSnapshot[]` al estado (interfaz + init).
-- [x] Implementar `pushHistory()` (snapshot por referencia; recorte a 5) y `undo()` (restaura + `syncEditingView`).
-- [x] Llamar `pushHistory()` al inicio de `toggleSlot`, `applyArmedSlot`, `removeSlot`, `toggleBypass`, `clearAll`, `updateSecondarySource`.
-- [x] Documentar en el propio spike (comentario en español de una línea) qué mutaciones historian y por qué se excluye slider/output.
-**Criterio de hecho (spike):**
-- [x] En consola: `useChainStore.getState().undo()` tras activar/quitar/bypass un pad **revierte** el estado visible en pads.
-- [x] El stack nunca supera 5 entradas.
-- [x] Mover un slider o cambiar de output **no** genera entrada de historial.
-**Tests manuales (DevTools):**
-1. Activar 3 pads (toggle) → `undo()` ×3 → cadena vuelve a vacío, paso a paso.
-2. Bypass un pad → `undo()` → vuelve a no-bypassed.
-3. Mover un slider 10 veces → `history.length` no cambia; luego un toggle sí suma 1.
-**Riesgos:**
-- **Referencias compartidas:** validar que ninguna acción mute `chains` in-place (todas usan `.map`/spread hoy; una regresión futura rompería el snapshot).
-- `undo()` debe recomputar `padSlots/activePads/compiledCode/previewCode` vía `syncEditingView`, no solo setear `chains`.
-- `removeSlot`/`applyArmedSlot` ya limpian `armedSlotId/selectedSlotId`; el snapshot no los guarda (aceptable en spike; anotar si molesta).
-**Escalación:** si aparece una mutación que sí muta in-place (snapshot corrupto) o si se necesita historiar params/reorder, **parar** y replanificar el modelo de snapshot (posible deep clone selectivo). No abrir la UI Ctrl+Z (es el bloque 5, otra sesión).
-**Modelo sugerido:** Opus (toca el store; decisiones de arquitectura del historial).
-**Commit:** `feat(chain): agrega historial de mutaciones y undo en el store (spike)`
-
----
-
-## Bloque 4 — H-02 (spike) · Auditar BRIGHT / DECAY / AMOUNT (doc)
-
-**Decisión:** **solo documentación** — consolidar `docs/planning/hydra-globals.md` en una **recomendación concreta por fader** (brightness/decay/amount), cerrar (con default propuesto, no implementar) las decisiones abiertas #1/#2/#3 del propio doc (L118–120), y registrar que **H-01 (speed) está done**. No tocar código de globals (decisión #5 abierta).
-**Descartado:**
-- Implementar brightness/decay/amount: decisión #5 abierta; H-02 es diagnóstico.
-- Re-derivar desde cero: el doc ya trae opciones A/B/C (L62–93) y tabla Hydra-real (L27–32); se consolida, no se reescribe.
-- Tocar `bpm`/`setResolution` (H-03/H-04): fuera de scope.
-**Archivos (rutas confirmadas):**
-- `docs/planning/hydra-globals.md` — actualizar tabla y sección de decisiones con recomendación por fader; marcar H-01 done.
-- Lectura de apoyo (no editar): `lib/global-faders.ts` (rangos: `brightness` −1..1 def 0; `decay` 0..1 def 0; `amount` 0..1 def 0.5), `docs/hydra-skills-index/color/` (`.brightness()`), `docs/hydra-skills-index/blend/` (feedback vía `src(oN).blend`), `synth-settings/synth-settings.md`.
-**Entregable (tabla por fader):**
-- [x] `brightness` → recomendación: `.brightness(v)` al final de la cadena **o** CSS master (elegir default, citar rango −1..1); no es global Hydra.
-- [x] `decay` → recomendación: renombrar a "feedback" y cablear solo con `src(oN)` activo; o marcar como no-op documentado hasta D-06.
-- [x] `amount` → recomendación: eliminar del panel **o** definir semántica concreta (p.ej. cantidad por defecto de modulate); default propuesto.
-**Criterio de hecho (spike):**
-- [x] `hydra-globals.md` con una recomendación **implementable** por fader y default propuesto para #1/#2/#3.
-- [x] H-01 marcado como done en el doc.
-- [x] **No** se modifica código de la app.
-**Tests manuales:** N/A (doc). Verificación: releer el doc y confirmar que un implementer podría abrir un ticket H-02b sin ambigüedad.
-**Riesgos:**
-- No inventar APIs Hydra: citar skill index; si un mapeo es incierto, marcar **gap** (no afirmar).
-- No cerrar la decisión #5 como "hecho" (sigue abierta); el doc propone default, no lo implementa.
-**Escalación:** si al documentar surge que `amount`/`decay` no tienen semántica viable sin decisión de producto, **parar** y listar la pregunta para el usuario (no forzar un mapeo dudoso).
-**Modelo sugerido:** Composer (solo doc; Opus si se quiere análisis Hydra más profundo).
-**Commit:** `docs(globals): consolida recomendaciones de bright/decay/amount (H-02)`
-
----
-
-## Bloque 5 — C-04 UI · Ctrl+Z undo cadena
-
-**Decisión:** `Ctrl+Z` / `Cmd+Z` (sin Shift) llama `useChainStore.getState().undo()` desde el hook de teclado; handler temprano antes del branch `KeyZ` nudge; `isEditableTarget` excluye inputs numéricos.
-**Descartado:** Ctrl+Shift+Z redo; undo en inputs editables; historiar sliders.
-**Pasos:**
-- [x] `use-launchpad-keys.ts`: `onUndo` en interfaz + ambos `optionsRef`; handler Ctrl/Cmd+Z antes de `KeyZ` nudge.
-- [x] `pad-band.tsx`: cablear `onUndo` con check `history.length`; feedback breve "Undone" en toolbar.
+- [x] Extender `param-value.ts` (tipo, guard, defaults, `scalarPreview`, `normalizeParamValue`, `emitParamExpression`).
+- [x] Ajustar `paramControl` en `launchpad-controls.ts` (offset de audio).
+- [x] UI ♪ en `param-slider.tsx` (toggle + bin + scale/offset).
+- [x] Auditar acciones del store que ramifican por tipo (lista arriba).
+- [x] Probar compilación, reacción en vivo y serialización de favorito.
 **Criterio de hecho:**
-- [x] Ctrl/Cmd+Z deshace hasta 5 niveles en mutaciones estructurales.
-- [x] Ctrl+Z en input numérico no interceptado (`isEditableTarget`).
-- [x] Sin regresión en Z+arrow nudge ni copy chain.
-**Commit:** `feat(chain): agrega atajo ctrl+z para deshacer mutaciones`
-
----
-
-## Bloque 6 — G-03 spike · Fader vertical piloto
-
-**Decisión:** spike con un solo control escalar en layout vertical; `param-fader.tsx` + integración en primer param de `pad-param-panel.tsx`; hallazgos en `param-panel-redesign.md`.
-**Descartado:** migrar todos los params; global-faders; stepper G-05; RGB.
-**Pasos:**
-- [x] Crear `param-fader.tsx` con Radix Slider `orientation="vertical"`.
-- [x] Integrar piloto en primer param escalar de `pad-param-panel.tsx` (badge "pilot").
-- [x] Documentar hallazgos en `docs/planning/param-panel-redesign.md`.
-**Criterio de hecho:**
-- [x] Un param escalar controlable con fader vertical funcional.
-- [x] Navegación teclado existente no rota en el resto del panel.
-- [x] Doc actualizado con recomendación go/no-go G-06.
-**Commit:** `feat(params): spike de fader vertical piloto (G-03)`
+- [x] Cualquier param numérico alterna fijo / fn / **♪** (bin + scale + offset).
+- [x] Con mic (Bloque 2) la cadena reacciona; **sin** mic el modo ♪ degrada a `offset` sin error.
+- [x] Favoritos serializan el modo audio y **favoritos viejos** (número/fn) siguen restaurando bien.
+- [x] `chain-preview`/`compiledCode` muestran la arrow `() => (a && a.fft ? a.fft[i] : 0)*s+o`.
+**Tests manuales:**
+1. Pad `osc` → param `frequency` → botón ♪ → bin 0, scale 40, offset 10: con mic activo el visual pulsa con los graves.
+2. Desactivar mic: la cadena no rompe (frequency ≈ offset).
+3. Guardar favorito con un param en ♪ → recargar → restaurar: el param vuelve en modo ♪ con bin/scale/offset correctos.
+4. Restaurar un favorito **viejo** (sin audio): sin errores, params fijos/fn intactos.
+5. Con foco en un control ♪, `#`/`fn` por teclado: no crashea (sale de ♪ a escalar).
+**Riesgos:**
+- `paramControl` sin la rama audio → `value` sería objeto → NaN en navegación por teclado. Cubierto arriba; **verificar**.
+- Si J-03 se implementa sin Bloque 2 (`a` no está en whitelist), la arrow lanza `ReferenceError` por `a` no declarado. **Dependencia dura de Bloque 2** — no mergear J-03 solo.
+- `bin` fuera de rango si en el futuro se bajan los bins (<4): el guard `a.fft[bin]` devuelve `undefined` → `undefined*scale = NaN`. Endurecer: `(a && a.fft && a.fft[bin] != null ? a.fft[bin] : 0)`.
+- UI: el modo audio agrega altura al panel (como fn); aceptable, no migrar a vertical acá (eso es G-06).
+**Escalación:** si Hydra **no** invoca la arrow por frame para ese parámetro (algún arg posicional que no acepta función), **parar**: verificar en `docs/hydra-skills-index/` / runtime antes de forzar. Lección existente: *"run() no es por frame"* — el que anima es la arrow, no un re-`run`.
+**Modelo sugerido:** **Opus** (M; toca tipos núcleo, compilador, store y UI; edge cases de serialización).
+**Commit:** `feat(audio): agrega modo audio por parametro con bin y scale`
 
 ---
 
 ## Review (al cerrar sesión)
+- [ ] Actualizar estados en `backlog.md`: G-07, J-01, J-02, J-03 → `done` (o `in-progress` si parcial).
+- [ ] Mover decisiones #9 y #10 de "abiertas" a **Decisiones** con fecha en `backlog.md`.
+- [ ] Lecciones en `lessons.md` si hubo correcciones (ej. lazy `_initAudio`, guard de `a.fft`, teardown de stream).
+- [ ] Actualizar `docs/planning/audio-reactivity.md` (estado real: motor on, modo ♪ hecho; teardown pendiente) y `docs/hydra-skills-index/audio/audio.md` (quitar TODO de indexado FFT si se confirma).
+- [ ] Un commit por bloque cerrado.
 
-- [x] Actualizar estados en `backlog.md` (G-02 y B-01 → `done` si se cerraron; C-04 spike → nota de avance; H-02 → doc actualizado).
-- [ ] Registrar en `lessons.md` cualquier corrección del usuario (p.ej. si `Enter` inline generó regresión, o si reorder/output cambian el modelo de undo).
-- [x] Un commit por bloque cerrado (Conventional Commits, español, con scope).
+## Handoff
+Plan listo — bloques 1–3. Nuevo chat → `/hydra-implementer` → un bloque por sesión (o modo oleada 1→2→3 con commit entre cada uno). **Bloque 3 depende del Bloque 2** (no mergear J-03 sin `a` en whitelist).

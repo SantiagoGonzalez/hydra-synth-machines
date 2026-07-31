@@ -140,7 +140,7 @@
 | G-04 | Primitiva `ParamFader` compartida           | idea   | M        | Media     | Pad params + globals + proyección.                        |
 | G-05 | Number stepper (evaluar)                    | idea   | S–M      | Baja      | Tradeoffs en planning doc.                                |
 | G-06 | Migrar panel completo a vertical            | idea   | M–L      | Media     | Tras validar G-03.                                        |
-| G-07 | RGB: HEX + color picker + sliders           | idea   | M        | Alta      | Conviven las 3 vías; `solid` + `color`. Ver planning doc. |
+| G-07 | RGB: HEX + color picker + sliders           | done   | M        | Alta      | Conviven las 3 vías; `solid` + `color`. Ver planning doc. |
 
 
 **Mantener sin cambiar:** `source-selector.tsx` (referencia de claridad).
@@ -173,9 +173,9 @@
 
 | ID   | Ítem                                               | Estado | Esfuerzo | Prioridad | Notas                                                |
 | ---- | -------------------------------------------------- | ------ | -------- | --------- | ---------------------------------------------------- |
-| J-01 | `detectAudio` + exponer `a` en evaluador           | idea   | S        | Alta      | Hoy `detectAudio: false`; `a` no está en whitelist.  |
-| J-02 | UI mic on/off + permisos + show/hide FFT           | idea   | S        | Alta      | `a.show()` / `a.hide()`.                             |
-| J-03 | Modo **audio** en `ParamValue` + compilador + UI ♪ | idea   | M        | Alta      | Paralelo a `fn(time)`; emite `() => a.fft[i]*scale`. |
+| J-01 | `detectAudio` + exponer `a` en evaluador           | done   | S        | Alta      | Hoy `detectAudio: false`; `a` no está en whitelist.  |
+| J-02 | UI mic on/off + permisos + show/hide FFT           | done   | S        | Alta      | `a.show()` / `a.hide()`.                             |
+| J-03 | Modo **audio** en `ParamValue` + compilador + UI ♪ | done   | M        | Alta      | Paralelo a `fn(time)`; emite `() => a.fft[i]*scale`. |
 | J-04 | Panel global audio (bins, scale, smooth, cutoff)   | idea   | S–M      | Media     | Mismo patrón que cablear globals (Epic H).           |
 | J-05 | Sync FFT a ventana proyección                      | idea   | M        | Media     | Depende D-03; ver estrategias en planning doc.       |
 | J-06 | Spike audio de sistema / OSC                       | idea   | L        | Baja      | Mic only en v1; loopback = investigación.            |
@@ -326,14 +326,14 @@
 
 ### Fase 0b — Param panel color (Epic G)
 
-- [ ] G-07 HEX + picker + sliders (`solid`, `color`)
+- [x] G-07 HEX + picker + sliders (`solid`, `color`)
 
 
 
 ### Fase 0c — Audio MVP (Epic J)
 
-- [ ] J-01, J-02 (motor + mic UI)
-- [ ] J-03 (modo ♪ en params) — puede solaparse con G
+- [x] J-01, J-02 (motor + mic UI)
+- [x] J-03 (modo ♪ en params) — puede solaparse con G
 
 
 

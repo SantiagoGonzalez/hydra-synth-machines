@@ -1,6 +1,6 @@
 import { getFunctionDef, getSourceOptions, type HydraParam } from "@/lib/hydra-registry"
 import { GLOBAL_FADERS, type GlobalFaderId, type GlobalFaderValues } from "@/lib/global-faders"
-import { isParamFn, type ParamValue } from "@/lib/param-value"
+import { isParamFn, isParamAudio, type ParamValue } from "@/lib/param-value"
 import type { ActivePad } from "@/stores/chain-store"
 
 export const FN_FIELD_RANGES = {
@@ -42,7 +42,7 @@ function paramControl(
     min: param.min,
     max: param.max,
     default: param.default,
-    value: isParamFn(value) ? value.offset : value,
+    value: isParamFn(value) ? value.offset : isParamAudio(value) ? value.offset : value,
   }
 }
 
