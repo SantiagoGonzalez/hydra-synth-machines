@@ -23,6 +23,7 @@ export function HydraCanvas() {
   const [isSaved, setIsSaved] = useState(false)
 
   const compiledCode = useChainStore((s) => s.compiledCode)
+  const speed = useChainStore((s) => s.globalFaders.speed)
   const activePads = useChainStore((s) => s.activePads)
   const editingOutput = useChainStore((s) => s.editingOutput)
   const gridView = useChainStore((s) => s.gridView)
@@ -75,6 +76,11 @@ export function HydraCanvas() {
     prevCodeRef.current = compiledCode
     prevPadCountRef.current = padCount
   }, [compiledCode, isReady, activePads.length])
+
+  useEffect(() => {
+    if (!isReady) return
+    evaluatorRef.current?.setSpeed(speed)
+  }, [speed, isReady])
 
   const handleDismissError = useCallback(() => {
     setError(null)
