@@ -11,6 +11,9 @@
 | [../docs/planning/param-panel-redesign.md](../docs/planning/param-panel-redesign.md) | Rediseño param panel (faders verticales, fn, stepper) |
 | [../docs/planning/projection-controls.md](../docs/planning/projection-controls.md) | Dimmer y controles de proyección |
 | [../docs/planning/hydra-globals.md](../docs/planning/hydra-globals.md) | Faders globales sin efecto + gaps `bpm`, `setResolution` |
+| [../docs/planning/audio-reactivity.md](../docs/planning/audio-reactivity.md) | Audio reactivo Hydra (`a.fft`), integración launchpad |
+| [../docs/planning/scene-composition.md](../docs/planning/scene-composition.md) | Scene bank + PNG/assets en composición |
+| [../docs/planning/subchains.md](../docs/planning/subchains.md) | Subchains como fuente de modulate/blend |
 
 ## Skills relacionados (specs de implementación)
 

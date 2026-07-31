@@ -41,6 +41,7 @@ app/launchpad/page.tsx                      /launchpad/projection (window.open)
 3. **Sincronización vía `BroadcastChannel`** — la ventana de proyección se suscribe a un canal (p.ej. `"hydra-projection"`) y recibe mensajes con `compiledCode` + output enfocado. El launchpad publica al cambiar `compiledCode` o `editingOutput`. Al abrirse, la proyección pide (o el launchpad reenvía) el estado actual.
 4. **Render limpio** — la proyección corre el código multi-output y termina en `render(oN)` del output enfocado. Sin UI, sin grid 2×2 (`gridView` no aplica), sin overlays, sin tabs o0–o3, sin badges. Solo el canvas.
 5. **Controles de performance (futuro)** — dimmer/blackout vía capa DOM sobre el canvas; ver `docs/planning/projection-controls.md` (D-06). No confundir con globals Hydra (`docs/planning/hydra-globals.md`).
+6. **Escenas y assets estáticos (futuro)** — scene bank y PNGs; ver `docs/planning/scene-composition.md` (Epic K, D-07–D-09).
 
 ### Contrato del mensaje (propuesto)
 

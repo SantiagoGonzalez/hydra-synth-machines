@@ -143,3 +143,6 @@ Interactive step-by-step visual synthesizer applying each transform from this in
 | [`docs/planning/param-panel-redesign.md`](../planning/param-panel-redesign.md) | Rediseño param panel |
 | [`docs/planning/projection-controls.md`](../planning/projection-controls.md) | Controles de proyección (dimmer) |
 | [`docs/planning/hydra-globals.md`](../planning/hydra-globals.md) | Globales Hydra y cableado |
+| [`docs/planning/audio-reactivity.md`](../planning/audio-reactivity.md) | Audio reactivo (`a.fft`, mic, modos de integración) |
+| [`docs/planning/scene-composition.md`](../planning/scene-composition.md) | Scene bank + assets PNG en escena |
+| [`docs/planning/subchains.md`](../planning/subchains.md) | Subchains — fuentes compuestas en modulate/blend |

@@ -17,6 +17,7 @@
 | Input numérico | Muy chico, difícil de leer (`text-[10px]` en `param-slider.tsx`) | Alta |
 | Sliders horizontales | Menos convencidos en columna alta y angosta | Media |
 | Atajo a input | No hay shortcut directo para editar valor numérico | Media |
+| Params RGB (`solid`, `color`) | Solo sliders r/g/b; sin HEX ni picker | Media |
 
 ## Lo que funciona bien (mantener)
 
@@ -69,6 +70,79 @@ El panel es **más alto que ancho**. Orientación vertical (estilo fader de mesa
 
 ---
 
+## Controles RGB: HEX + color picker + sliders (conviven)
+
+Para pads con parámetros **r / g / b** (y opcionalmente **a**), las tres vías editan el **mismo estado** en el store — no son modos excluyentes.
+
+### Funciones alcanzadas
+
+| Función | Params | ¿HEX + picker? | Notas Hydra |
+|---------|--------|----------------|-------------|
+| `solid` | r, g, b, a ∈ [0, 1] | **Sí** | Color plano; caso ideal |
+| `color` | r, g, b ∈ [0, 2] | **Sí** | Multiplicadores de canal; picker mapea a [0,1]; valores &gt;1 vía sliders |
+| `shift` | r, g, b, a (offsets) | **No** | No es color sRGB; mantener solo sliders |
+
+Detección vía metadata en `hydra-registry.ts` (propuesta):
+
+```ts
+colorInput?: {
+  channels: ("r" | "g" | "b")[]
+  alphaParam?: "a"
+  mode: "unit" | "multiplier"  // unit → 0–1, multiplier → 0–2 en color()
+}
+```
+
+### Layout propuesto (bloque único arriba de sliders r/g/b)
+
+```
+┌──────────────────────────────────┐
+│  [■]  #44ff88    [picker]        │  ← swatch + HEX + input type=color
+├──────────────────────────────────┤
+│  r  ████████░░  0.27             │  ← sliders existentes (SingleParamSlider)
+│  g  ██████████  1.00             │
+│  b  ██████░░░░  0.53             │
+│  a  ██████████  1.00   (solid)   │
+└──────────────────────────────────┘
+```
+
+### Sincronización (una fuente de verdad: `pad.params`)
+
+| Acción usuario | Efecto |
+|----------------|--------|
+| Mueve slider **r** | Actualiza swatch, HEX y resto de canales en UI |
+| Escribe **#RRGGBB** (+ Enter/blur) | Parse → `r,g,b` (÷255); invalida draft si mal formado |
+| **Color picker** nativo | Mismo que HEX; emite r,g,b en [0,1] |
+| **#RRGGBBAA** (opcional fase 2) | Setea también `a` en `solid` |
+
+### Utilidades (`lib/color-param.ts` — propuesto)
+
+- `rgbToHex(r,g,b)` / `hexToRgb(hex)` — canales normalizados 0–1
+- Validación: `#RGB`, `#RRGGBB`, opcional `#RRGGBBAA`
+- `mode: multiplier`: picker solo escribe min(r,g,b, 1) o muestra swatch “clampado” con hint si algún canal &gt;1
+
+### Teclado / foco
+
+- HEX input cuenta como `isEditableTarget` (no robar atajos del launchpad)
+- Tab: swatch → HEX → picker → sliders r → g → b
+- Entrada en HEX con foco en bloque color: `Enter` commit (G-02 compatible)
+
+### Criterios de aceptación (G-07)
+
+1. En pad **solid**, picker/HEX/sliders siempre muestran el mismo color.
+2. Cambiar HEX actualiza canvas vía `updateParam` en los tres canales.
+3. Sliders siguen funcionando igual (incl. modo **fn** por canal si aplica — fn en r/g/b es fase posterior).
+4. `shift` no muestra bloque HEX/picker.
+
+### Archivos tocados (implementación futura)
+
+- `lib/hydra-registry.ts` — `colorInput` en `solid` y `color`
+- `lib/color-param.ts` — conversión HEX ↔ RGB
+- `components/launchpad/rgb-color-control.tsx` — bloque compuesto
+- `components/launchpad/pad-param-panel.tsx` — render condicional
+- `skills/param-panel.skill.md` — contrato
+
+---
+
 ## Botones — mejoras concretas
 
 | Control | Hoy | Propuesta |
@@ -86,6 +160,7 @@ El panel es **más alto que ancho**. Orientación vertical (estilo fader de mesa
 - [ ] Contraste botones (fn, bypass, #)
 - [ ] Atajo `Enter` / `/` → focus input del control enfocado
 - [ ] A-02: copy bypass vs quitar cadena
+- [ ] **G-07:** HEX + color picker en `solid` / `color` (convive con sliders)
 
 ### Fase 2 — Primitiva `ParamFader`
 - [ ] Componente vertical reutilizable (pad params + globals)
@@ -107,6 +182,8 @@ El panel es **más alto que ancho**. Orientación vertical (estilo fader de mesa
 1. ¿Fn en modo escalar muestra solo botón, o también preview de la curva?
 2. ¿Stepper en todos los params o solo escalares con `step` ≤ 0.01?
 3. ¿Globals y pad params comparten exactamente el mismo componente?
+4. ¿HEX con alpha (`#RRGGBBAA`) en v1 o solo `#RRGGBB` + slider `a`?
+5. ¿Picker clampa `color()` a [0,1] o permite arrastrar y seguir editando &gt;1 en sliders?
 
 ---
 

@@ -36,6 +36,8 @@ Ver también: [`synth-settings`](./hydra-skills-index/synth-settings/synth-setti
 | Pad armado para preview antes de apply | **Armed** | `armedSlotId` + preview en store |
 | Pad activo pero sin audio en compile | **Bypass** | `isBypassed` — no emite fragmento |
 | Quitar slot de la grilla | **Remove slot** | `removeSlot` — distinto de bypass |
+| Mini-cadena dentro de modulate/blend | **Subchain** | `secondaryChain[]` en el pad padre — ver `docs/planning/subchains.md` |
+| Fuente secundaria (hoy, un solo paso) | **Secondary source** | `secondarySourceId` — migrará a subchain |
 
 ---
 

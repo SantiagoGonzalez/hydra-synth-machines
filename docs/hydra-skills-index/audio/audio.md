@@ -31,6 +31,7 @@ Audio functions are **globals/side-effect configurators**, not chain transforms.
 ## Common Uses & Pitfalls
 
 - This project's playground uses `detectAudio: false` — audio skills apply when enabling audio in editor or custom Hydra init.
+- Launchpad plan: `docs/planning/audio-reactivity.md` (Epic J).
 - Prefer small multipliers on `fft` values to avoid chaotic jumps.
 
 ## Related Functions
