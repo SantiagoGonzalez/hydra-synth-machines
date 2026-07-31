@@ -9,7 +9,7 @@ import {
   OUTPUT_BUFFERS,
 } from "@/lib/chain-compiler"
 import { FN_SHAPES, isParamFn, normalizeParamValue, type ParamValue } from "@/lib/param-value"
-import { getDefaultGlobalFaders, type GlobalFaderId, type GlobalFaderValues } from "@/lib/global-faders"
+import { getDefaultGlobalFaders, normalizeGlobalFaders, type GlobalFaderId, type GlobalFaderValues } from "@/lib/global-faders"
 import {
   buildControlList,
   nudgeByFraction,
@@ -77,14 +77,15 @@ function restoreSnapshot(
   snapshot: ChainSnapshot,
   gridView: boolean
 ): Partial<ChainState> {
+  const globalFaders = normalizeGlobalFaders(snapshot.globalFaders as Record<string, number>)
   return {
     chains: snapshot.chains,
     editingOutput: snapshot.editingOutput,
-    globalFaders: snapshot.globalFaders,
+    globalFaders,
     armedSlotId: null,
     selectedSlotId: null,
     momentarySlotId: null,
-    ...syncEditingView(snapshot.chains, snapshot.editingOutput, null, gridView),
+    ...syncEditingView(snapshot.chains, snapshot.editingOutput, null, gridView, globalFaders),
   }
 }
 
@@ -123,19 +124,25 @@ function deriveActivePads(padSlots: PadSlot[]): ActivePad[] {
 function rebuildCompiled(
   chains: Record<OutputBuffer, OutputChain>,
   gridView: boolean,
-  editingOutput: OutputBuffer
+  editingOutput: OutputBuffer,
+  globalFaders: GlobalFaderValues
 ): string {
   const byOutput = Object.fromEntries(
     OUTPUT_BUFFERS.map((buf) => [buf, chains[buf].activePads])
   ) as Record<OutputBuffer, ActivePad[]>
-  return compileMultiChain(byOutput, { gridView, focusOutput: editingOutput })
+  return compileMultiChain(byOutput, {
+    gridView,
+    focusOutput: editingOutput,
+    feedback: globalFaders.feedback,
+  })
 }
 
 function computePreviewCode(
   chains: Record<OutputBuffer, OutputChain>,
   editingOutput: OutputBuffer,
   armedSlotId: string | null,
-  gridView: boolean
+  gridView: boolean,
+  globalFaders: GlobalFaderValues
 ): string | null {
   if (!armedSlotId) return null
   const chain = chains[editingOutput]
@@ -155,18 +162,29 @@ function computePreviewCode(
       buf === editingOutput ? previewPads : chains[buf].activePads,
     ])
   ) as Record<OutputBuffer, ActivePad[]>
-  return compileMultiChain(byOutput, { gridView, focusOutput: editingOutput })
+  return compileMultiChain(byOutput, {
+    gridView,
+    focusOutput: editingOutput,
+    feedback: globalFaders.feedback,
+  })
 }
 
 function syncEditingView(
   chains: Record<OutputBuffer, OutputChain>,
   editingOutput: OutputBuffer,
   armedSlotId: string | null,
-  gridView: boolean
+  gridView: boolean,
+  globalFaders: GlobalFaderValues
 ) {
   const chain = chains[editingOutput]
-  const compiledCode = rebuildCompiled(chains, gridView, editingOutput)
-  const previewCode = computePreviewCode(chains, editingOutput, armedSlotId, gridView)
+  const compiledCode = rebuildCompiled(chains, gridView, editingOutput, globalFaders)
+  const previewCode = computePreviewCode(
+    chains,
+    editingOutput,
+    armedSlotId,
+    gridView,
+    globalFaders
+  )
   return {
     padSlots: chain.padSlots,
     activePads: chain.activePads,
@@ -180,11 +198,15 @@ function updateChain(
   editingOutput: OutputBuffer,
   updater: (chain: OutputChain) => OutputChain,
   armedSlotId: string | null,
-  gridView: boolean
+  gridView: boolean,
+  globalFaders: GlobalFaderValues
 ) {
   const updatedChain = updater(chains[editingOutput])
   const nextChains = { ...chains, [editingOutput]: updatedChain }
-  return { chains: nextChains, ...syncEditingView(nextChains, editingOutput, armedSlotId, gridView) }
+  return {
+    chains: nextChains,
+    ...syncEditingView(nextChains, editingOutput, armedSlotId, gridView, globalFaders),
+  }
 }
 
 interface ChainState {
@@ -522,9 +544,22 @@ export const useChainStore = create<ChainState>((set, get) => ({
   },
 
   setGlobalFader: (faderId, value) => {
-    set((state) => ({
-      globalFaders: { ...state.globalFaders, [faderId]: value },
-    }))
+    set((state) => {
+      const globalFaders = { ...state.globalFaders, [faderId]: value }
+      if (faderId === "feedback") {
+        return {
+          globalFaders,
+          ...syncEditingView(
+            state.chains,
+            state.editingOutput,
+            state.armedSlotId,
+            state.gridView,
+            globalFaders
+          ),
+        }
+      }
+      return { globalFaders }
+    })
   },
 
   toggleSlot: (slotId) => {
@@ -542,7 +577,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
             : s
         )
         return { padSlots, activePads: deriveActivePads(padSlots) }
-      }, state.armedSlotId, state.gridView)
+      }, state.armedSlotId, state.gridView, state.globalFaders)
     )
   },
 
@@ -554,7 +589,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
           s.instanceId === instanceId ? { ...s, isBypassed: !s.isBypassed } : s
         )
         return { padSlots, activePads: deriveActivePads(padSlots) }
-      }, state.armedSlotId, state.gridView)
+      }, state.armedSlotId, state.gridView, state.globalFaders)
     )
   },
 
@@ -577,7 +612,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       updateChain(state.chains, state.editingOutput, (chain) => ({
         padSlots: [...chain.padSlots, newSlot],
         activePads: chain.activePads,
-      }), state.armedSlotId, state.gridView)
+      }), state.armedSlotId, state.gridView, state.globalFaders)
     )
   },
 
@@ -598,7 +633,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
           return { padSlots, activePads: deriveActivePads(padSlots) }
         },
         state.armedSlotId === slotId ? null : state.armedSlotId,
-        state.gridView
+        state.gridView,
+        state.globalFaders
       )
       const selectedSlotId = state.selectedSlotId === slotId ? null : state.selectedSlotId
       const armedSlotId = state.armedSlotId === slotId ? null : state.armedSlotId
@@ -622,7 +658,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
           return { padSlots, activePads: deriveActivePads(padSlots) }
         },
         state.armedSlotId,
-        state.gridView
+        state.gridView,
+        state.globalFaders
       )
       return { ...result, momentarySlotId: slotId, selectedSlotId: slotId }
     })
@@ -642,7 +679,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
           return { padSlots, activePads: deriveActivePads(padSlots) }
         },
         state.armedSlotId,
-        state.gridView
+        state.gridView,
+        state.globalFaders
       )
       return { ...result, momentarySlotId: null }
     })
@@ -661,7 +699,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
           s.instanceId === instanceId ? { ...s, params: { ...s.params, [paramName]: value } } : s
         )
         return { padSlots, activePads: deriveActivePads(padSlots) }
-      }, state.armedSlotId, state.gridView)
+      }, state.armedSlotId, state.gridView, state.globalFaders)
     )
   },
 
@@ -683,7 +721,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
           return { padSlots, activePads: deriveActivePads(padSlots) }
         },
         state.armedSlotId,
-        state.gridView
+        state.gridView,
+        state.globalFaders
       )
     })
   },
@@ -697,7 +736,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
             : s
         )
         return { padSlots, activePads: deriveActivePads(padSlots) }
-      }, state.armedSlotId, state.gridView)
+      }, state.armedSlotId, state.gridView, state.globalFaders)
     )
   },
 
@@ -713,7 +752,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       const nextChains = { ...state.chains, [state.editingOutput]: nextChain }
       return {
         chains: nextChains,
-        ...syncEditingView(nextChains, state.editingOutput, null, state.gridView),
+        ...syncEditingView(nextChains, state.editingOutput, null, state.gridView, state.globalFaders),
         armedSlotId: null,
         selectedSlotId: null,
         momentarySlotId: null,
@@ -729,14 +768,14 @@ export const useChainStore = create<ChainState>((set, get) => ({
       momentarySlotId: null,
       focusedControlId: null,
       sourceDraftId: null,
-      ...syncEditingView(state.chains, buffer, null, state.gridView),
+      ...syncEditingView(state.chains, buffer, null, state.gridView, state.globalFaders),
     }))
   },
 
   setGridView: (gridView) => {
     set((state) => ({
       gridView,
-      ...syncEditingView(state.chains, state.editingOutput, state.armedSlotId, gridView),
+      ...syncEditingView(state.chains, state.editingOutput, state.armedSlotId, gridView, state.globalFaders),
     }))
   },
 
@@ -748,7 +787,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       return {
         armedSlotId: slotId,
         selectedSlotId: slotId,
-        ...syncEditingView(state.chains, state.editingOutput, slotId, state.gridView),
+        ...syncEditingView(state.chains, state.editingOutput, slotId, state.gridView, state.globalFaders),
       }
     })
   },
@@ -756,7 +795,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
   disarmSlot: () => {
     set((state) => ({
       armedSlotId: null,
-      ...syncEditingView(state.chains, state.editingOutput, null, state.gridView),
+      ...syncEditingView(state.chains, state.editingOutput, null, state.gridView, state.globalFaders),
     }))
   },
 
@@ -777,7 +816,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
           return { padSlots, activePads: deriveActivePads(padSlots) }
         },
         null,
-        state.gridView
+        state.gridView,
+        state.globalFaders
       )
       return { ...result, armedSlotId: null, selectedSlotId: armedSlotId }
     })
@@ -791,7 +831,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
     const chainsInput: Partial<Record<OutputBuffer, ActivePad[]>> = Array.isArray(input)
       ? { o0: input }
       : input
-    const { editingOutput, gridView } = get()
+    const { editingOutput, gridView, globalFaders } = get()
     const nextChains = initChains()
     const now = Date.now()
 
@@ -856,7 +896,7 @@ export const useChainStore = create<ChainState>((set, get) => ({
       armedSlotId: null,
       selectedSlotId: null,
       momentarySlotId: null,
-      ...syncEditingView(nextChains, editingOutput, null, gridView),
+      ...syncEditingView(nextChains, editingOutput, null, gridView, globalFaders),
     })
   },
 }))

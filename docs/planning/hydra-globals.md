@@ -1,6 +1,6 @@
 # Globales Hydra — estado actual y gaps
 
-> Estado: **planificación** + diagnóstico. H-01 (`speed`) **done** (2026-07-31). BRIGHT/DECAY/AMOUNT siguen sin cablear.
+> Estado: **implementado** (H-01 speed, H-02 brightness/feedback, H-03 bpm — 2026-07-31). H-04 setResolution pendiente (con D-05).
 
 ---
 
@@ -15,8 +15,8 @@ Al mover **SPEED / BRIGHT / DECAY / AMOUNT** en el param panel, la imagen no cam
 | UI `global-faders.tsx` | OK — actualiza store |
 | `chain-store.globalFaders` | OK — `setGlobalFader` |
 | Navegación teclado | OK — en `buildControlList` |
-| `chain-compiler.ts` | **No lee** `globalFaders` (salvo `speed` vía evaluador) |
-| `chain-evaluator.ts` | `speed` asignado en `run()` (H-01); `bpm` expuesto pero sin UI |
+| `chain-compiler.ts` | Lee `feedback` (inyecta `blend(oN)` si hay `src(oN)`); brightness vía CSS en canvas |
+| `chain-evaluator.ts` | `speed` y `bpm` asignados en evaluador (H-01, H-03) |
 
 Comentario en código: `global-faders.tsx` línea 3 — *“sin cablear al compilador aún”* (válido para BRIGHT/DECAY/AMOUNT).
 
@@ -125,8 +125,8 @@ osc(10).out()
 | ID | Ítem | Estado |
 |----|------|--------|
 | H-01 | Cablear `speed` (y validar efecto visible) | **done** (2026-07-31) |
-| H-02 | Auditar labels: brightness/decay/amount vs semántica Hydra | **doc done** — implementación en H-02b |
-| H-03 | Exponer `bpm` en globals o sección “Synth” | idea |
+| H-02 | Cablear brightness + feedback; eliminar amount | **done** (2026-07-31) |
+| H-03 | Exponer `bpm` en globals | **done** (2026-07-31) |
 | H-04 | `setResolution` para modo proyector (con D-05) | idea |
 | D-06 | Dimmer DOM (no es global Hydra) — ver `projection-controls.md` | idea |
 
@@ -147,4 +147,4 @@ osc(10).out()
 | 1 | ¿`brightness` global = CSS master o `.brightness()` en toda la salida? | **CSS master** en stage/canvas (`filter: brightness(1 + v)`) | Cerrada en doc; implementar en H-02b |
 | 2 | ¿Eliminar o renombrar DECAY/AMOUNT hasta tener semántica clara? | **DECAY → FEEDBACK** (solo con `src`); **AMOUNT → eliminar** del panel v1 | Cerrada en doc; implementar en H-02b |
 | 3 | ¿BPM junto a globals o en panel “Synth settings” separado? | **Panel “Synth”** separado (junto a H-03), no mezclar con faders VJ | Cerrada en doc; implementar en H-03 |
-| 5 | ¿Implementar BRIGHT/DECAY/AMOUNT ahora? | **No** — solo documentar; ticket H-02b tras validación de producto | Abierta |
+| 5 | ¿Implementar BRIGHT/DECAY/AMOUNT ahora? | **Hecho** — H-02b (brightness CSS, feedback, sin amount); H-03 bpm | Cerrada |

@@ -12,6 +12,8 @@ export interface HydraEvaluator {
   run: (code: string, structural?: boolean) => void
   /** Actualiza el multiplicador global de velocidad Hydra (sin recompilar) */
   setSpeed: (value: number) => void
+  /** Actualiza el tempo global Hydra en BPM (sin recompilar) */
+  setBpm: (value: number) => void
   /** Silencia el canvas */
   hush: () => void
   /** Libera el engine (llamar en cleanup) */
@@ -165,6 +167,10 @@ export async function createHydraEvaluator(
     if (_ready) synth.speed = value
   }
 
+  const setBpm = (value: number) => {
+    if (_ready) synth.bpm = value
+  }
+
   const dispose = () => {
     _ready = false
     cancelAnimationFrame(rafId)
@@ -181,6 +187,7 @@ export async function createHydraEvaluator(
   return {
     run,
     setSpeed,
+    setBpm,
     hush,
     dispose,
     get ready() {

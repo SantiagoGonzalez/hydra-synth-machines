@@ -1,6 +1,6 @@
 "use client"
 
-// Faders globales del launchpad (UI local, sin cablear al compilador aún)
+// Faders globales del launchpad: speed/bpm vía evaluador, brightness CSS, feedback en compilador
 
 import { useEffect, useRef } from "react"
 import { GLOBAL_FADERS } from "@/lib/global-faders"
@@ -15,13 +15,17 @@ interface GlobalFaderProps {
   isFocusActive: boolean
 }
 
+const FADER_TITLES: Partial<Record<(typeof GLOBAL_FADERS)[number]["id"], string>> = {
+  speed: "Speed — global Hydra time multiplier (affects fn(time) animations)",
+  bpm: "BPM — global Hydra tempo (beats per minute)",
+  brightness: "Brightness — master CSS filter on canvas (−1…1, 0 = normal)",
+  feedback: "Feedback — blend damping when chain uses src(oN); no effect without buffer feedback",
+}
+
 function GlobalFader({ fader, value, onChange, controlId: id, isFocusActive }: GlobalFaderProps) {
   const pct = ((value - fader.min) / (fader.max - fader.min)) * 100
   const containerRef = useRef<HTMLDivElement>(null)
-  const title =
-    fader.id === "speed"
-      ? "Speed — global Hydra time multiplier (affects fn(time) animations)"
-      : undefined
+  const title = FADER_TITLES[fader.id]
 
   useEffect(() => {
     if (isFocusActive) containerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })

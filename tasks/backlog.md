@@ -157,8 +157,8 @@
 | ID   | Ítem                            | Estado | Esfuerzo | Prioridad | Notas                                |
 | ---- | ------------------------------- | ------ | -------- | --------- | ------------------------------------ |
 | H-01 | Cablear `speed` al evaluador    | done   | S        | **Alta**  | `setSpeed` en evaluador + `useEffect` en hydra-canvas (2026-07-31). |
-| H-02 | Auditar BRIGHT / DECAY / AMOUNT | done   | S        | Alta      | Doc consolidado en `hydra-globals.md`; implementación → H-02b.      |
-| H-03 | Exponer `bpm` en UI             | idea   | S        | Media     | Global Hydra; no está en launchpad.  |
+| H-02 | Cablear BRIGHT / FEEDBACK (globals) | done   | S–M      | Alta      | Brightness CSS; feedback en compilador; amount eliminado. |
+| H-03 | Exponer `bpm` en UI             | done   | S        | Media     | Fader BPM + `setBpm` en evaluador (patrón H-01).  |
 | H-04 | `setResolution` modo proyector  | idea   | M        | Media     | Con D-05.                            |
 
 
@@ -315,6 +315,8 @@
 - [x] A-02
 - [x] G-01, G-02
 - [x] H-01 (speed)
+- [x] H-02 (brightness CSS + feedback + sin amount)
+- [x] H-03 (bpm)
 - [x] C-04 (store + UI Ctrl+Z)
 - [x] **C-05** copy en ChainPreview (compact + selección)
 - [ ] **I-02** favicon original
@@ -348,7 +350,7 @@
 ### Fase 2 — Polish + subchains
 
 - [ ] G-04, G-06
-- [ ] H-02, H-03
+- [ ] H-04
 - [ ] B-02, B-03
 - [ ] E-01, E-02
 - [ ] F-01, F-02

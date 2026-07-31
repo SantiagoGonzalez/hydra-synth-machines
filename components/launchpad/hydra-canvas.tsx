@@ -7,6 +7,7 @@ import { Maximize2, AlertCircle, Heart, LayoutGrid } from "lucide-react"
 import { useChainStore, selectAllChainsSnapshot, type OutputBuffer } from "@/stores/chain-store"
 import { useFavoritesStore } from "@/stores/favorites-store"
 import { createHydraEvaluator, type HydraEvaluator } from "@/lib/chain-evaluator"
+import { brightnessToCssFilter } from "@/lib/global-faders"
 import { OUTPUT_BUFFERS } from "@/lib/chain-compiler"
 import { cn } from "@/lib/utils"
 
@@ -24,6 +25,8 @@ export function HydraCanvas() {
 
   const compiledCode = useChainStore((s) => s.compiledCode)
   const speed = useChainStore((s) => s.globalFaders.speed)
+  const bpm = useChainStore((s) => s.globalFaders.bpm)
+  const brightness = useChainStore((s) => s.globalFaders.brightness)
   const activePads = useChainStore((s) => s.activePads)
   const editingOutput = useChainStore((s) => s.editingOutput)
   const gridView = useChainStore((s) => s.gridView)
@@ -82,6 +85,11 @@ export function HydraCanvas() {
     evaluatorRef.current?.setSpeed(speed)
   }, [speed, isReady])
 
+  useEffect(() => {
+    if (!isReady) return
+    evaluatorRef.current?.setBpm(bpm)
+  }, [bpm, isReady])
+
   const handleDismissError = useCallback(() => {
     setError(null)
     evaluatorRef.current?.run(lastSafeCode, true)
@@ -136,6 +144,7 @@ export function HydraCanvas() {
       <canvas
         ref={canvasRef}
         className="relative z-1 w-full h-full bg-black block"
+        style={{ filter: brightnessToCssFilter(brightness) }}
       />
 
       <div className={cn(

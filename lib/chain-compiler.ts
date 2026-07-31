@@ -10,6 +10,17 @@ export const OUTPUT_BUFFERS: OutputBuffer[] = ["o0", "o1", "o2", "o3"]
 export const EMPTY_CODE = "solid(0,0,0).out()"
 const SAFE_SOURCE = "solid(0,0,0)"
 
+/** True si algún pad audible usa src(oN) del buffer dado (feedback loop) */
+export function chainUsesBufferFeedback(pads: ActivePad[], buffer: OutputBuffer): boolean {
+  const srcId = `src:${buffer}`
+  return pads.some((pad) => {
+    if (pad.isBypassed) return false
+    const def = getFunctionDef(pad.functionId)
+    const resolved = pad.secondarySourceId ?? def?.secondarySourceId
+    return resolved === srcId
+  })
+}
+
 /** Resuelve el fragmento de fuente secundaria (función o src(oN)) */
 function buildSecondarySourceFragment(pad: ActivePad, fallbackId: string): string | null {
   const resolvedSourceId = pad.secondarySourceId ?? fallbackId
@@ -76,7 +87,11 @@ function buildCallFragment(pad: ActivePad, def: HydraFunctionDef): string {
 }
 
 /** Compila pads activos hacia un buffer concreto (.out() o .out(oN)) */
-export function compileChainToBuffer(activePads: ActivePad[], outputBuffer: OutputBuffer): string | null {
+export function compileChainToBuffer(
+  activePads: ActivePad[],
+  outputBuffer: OutputBuffer,
+  feedback = 0
+): string | null {
   // Bypass: los pads bypasseados conservan posición/params pero no emiten fragmento
   const audiblePads = activePads.filter((p) => !p.isBypassed)
   if (audiblePads.length === 0) return null
@@ -103,6 +118,10 @@ export function compileChainToBuffer(activePads: ActivePad[], outputBuffer: Outp
     }
   }
 
+  if (feedback > 0 && chainUsesBufferFeedback(audiblePads, outputBuffer)) {
+    fragments.push(`blend(${outputBuffer}, ${feedback})`)
+  }
+
   const outCall = outputBuffer === "o0" ? "out()" : `out(${outputBuffer})`
   return fragments.join(".") + "." + outCall
 }
@@ -113,17 +132,19 @@ export function compileChainToBuffer(activePads: ActivePad[], outputBuffer: Outp
  */
 export function compileChain(
   activePads: ActivePad[],
-  outputBuffer: OutputBuffer = "o0"
+  outputBuffer: OutputBuffer = "o0",
+  feedback = 0
 ): string {
   if (activePads.length === 0) {
     return EMPTY_CODE
   }
-  return compileChainToBuffer(activePads, outputBuffer) ?? EMPTY_CODE
+  return compileChainToBuffer(activePads, outputBuffer, feedback) ?? EMPTY_CODE
 }
 
 export interface CompileMultiOptions {
   gridView?: boolean
   focusOutput?: OutputBuffer
+  feedback?: number
 }
 
 /**
@@ -134,11 +155,11 @@ export function compileMultiChain(
   chainsByOutput: Record<OutputBuffer, ActivePad[]>,
   options: CompileMultiOptions = {}
 ): string {
-  const { gridView = false, focusOutput = "o0" } = options
+  const { gridView = false, focusOutput = "o0", feedback = 0 } = options
   const blocks: string[] = []
 
   for (const buf of OUTPUT_BUFFERS) {
-    const block = compileChainToBuffer(chainsByOutput[buf], buf)
+    const block = compileChainToBuffer(chainsByOutput[buf], buf, feedback)
     if (block) blocks.push(block)
   }
 
