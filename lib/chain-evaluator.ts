@@ -14,6 +14,10 @@ export interface HydraEvaluator {
   setSpeed: (value: number) => void
   /** Actualiza el tempo global Hydra en BPM (sin recompilar) */
   setBpm: (value: number) => void
+  /** Habilita/deshabilita captura de micrófono (lazy init de audio) */
+  setAudioEnabled: (enabled: boolean) => void
+  /** Muestra/oculta el visualizador FFT del motor de audio */
+  setFftVisible: (visible: boolean) => void
   /** Silencia el canvas */
   hush: () => void
   /** Libera el engine (llamar en cleanup) */
@@ -93,6 +97,7 @@ function buildBoundFunctions(s: any): Record<string, unknown> {
     setResolution: s.setResolution?.bind(s),
     hush: s.hush?.bind(s),
     setFunction: s.setFunction?.bind(s),
+    a: s.a,
   }
 }
 
@@ -118,6 +123,10 @@ export async function createHydraEvaluator(
 
   const synth = hydra.synth
   let _ready = true
+  let lastCode = EMPTY_CODE
+
+  // Hydra interno: lazy init de audio (API underscore, hydra-synth@1.4.0)
+  const hydraInternal = hydra as { _initAudio?: () => void; detectAudio: boolean }
 
   // Loop raf propio (autoLoop de hydra no se puede detener): permite liberar el engine al desmontar
   let rafId = 0
@@ -131,6 +140,7 @@ export async function createHydraEvaluator(
 
   const run = (code: string, structural = false) => {
     if (!_ready) return
+    lastCode = code
 
     try {
       if (structural) {
@@ -171,6 +181,25 @@ export async function createHydraEvaluator(
     if (_ready) synth.bpm = value
   }
 
+  const setAudioEnabled = (enabled: boolean) => {
+    if (!_ready) return
+    if (enabled) {
+      if (!synth.a) hydraInternal._initAudio?.()
+      hydraInternal.detectAudio = true
+      synth.a?.hide()
+      run(lastCode, true)
+    } else {
+      hydraInternal.detectAudio = false
+      synth.a?.hide()
+    }
+  }
+
+  const setFftVisible = (visible: boolean) => {
+    if (!_ready || !synth.a) return
+    if (visible) synth.a.show()
+    else synth.a.hide()
+  }
+
   const dispose = () => {
     _ready = false
     cancelAnimationFrame(rafId)
@@ -188,6 +217,8 @@ export async function createHydraEvaluator(
     run,
     setSpeed,
     setBpm,
+    setAudioEnabled,
+    setFftVisible,
     hush,
     dispose,
     get ready() {

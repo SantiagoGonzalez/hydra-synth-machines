@@ -6,6 +6,7 @@ import { useChainStore, selectDetailPad } from "@/stores/chain-store"
 import { ChainChips } from "@/components/launchpad/chain-chips"
 import { PadParamPanel } from "@/components/launchpad/pad-param-panel"
 import { GlobalFaders } from "@/components/launchpad/global-faders"
+import { AudioControls } from "@/components/launchpad/audio-controls"
 
 export function ParamPanel() {
   const activePads = useChainStore((s) => s.activePads)
@@ -67,6 +68,7 @@ export function ParamPanel() {
       )}
 
       <GlobalFaders />
+      <AudioControls />
     </aside>
   )
 }

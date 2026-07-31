@@ -27,6 +27,8 @@ export function HydraCanvas() {
   const speed = useChainStore((s) => s.globalFaders.speed)
   const bpm = useChainStore((s) => s.globalFaders.bpm)
   const brightness = useChainStore((s) => s.globalFaders.brightness)
+  const audioEnabled = useChainStore((s) => s.audioEnabled)
+  const fftVisible = useChainStore((s) => s.fftVisible)
   const activePads = useChainStore((s) => s.activePads)
   const editingOutput = useChainStore((s) => s.editingOutput)
   const gridView = useChainStore((s) => s.gridView)
@@ -89,6 +91,16 @@ export function HydraCanvas() {
     if (!isReady) return
     evaluatorRef.current?.setBpm(bpm)
   }, [bpm, isReady])
+
+  useEffect(() => {
+    if (!isReady) return
+    evaluatorRef.current?.setAudioEnabled(audioEnabled)
+  }, [audioEnabled, isReady])
+
+  useEffect(() => {
+    if (!isReady) return
+    evaluatorRef.current?.setFftVisible(fftVisible)
+  }, [fftVisible, isReady])
 
   const handleDismissError = useCallback(() => {
     setError(null)

@@ -225,6 +225,8 @@ interface ChainState {
   focusedControlId: string | null
   sourceDraftId: string | null
   globalFaders: GlobalFaderValues
+  audioEnabled: boolean
+  fftVisible: boolean
   history: ChainSnapshot[]
   redoStack: ChainSnapshot[]
 
@@ -262,6 +264,8 @@ interface ChainState {
   setSourceDraft: (sourceId: string | null) => void
   applySourceDraft: () => void
   setGlobalFader: (faderId: GlobalFaderId, value: number) => void
+  setAudioEnabled: (enabled: boolean) => void
+  setFftVisible: (visible: boolean) => void
   undo: () => void
   redo: () => void
 }
@@ -282,6 +286,8 @@ export const useChainStore = create<ChainState>((set, get) => ({
   focusedControlId: null,
   sourceDraftId: null,
   globalFaders: getDefaultGlobalFaders(),
+  audioEnabled: false,
+  fftVisible: false,
   history: [],
   redoStack: [],
 
@@ -561,6 +567,10 @@ export const useChainStore = create<ChainState>((set, get) => ({
       return { globalFaders }
     })
   },
+
+  setAudioEnabled: (enabled) => set({ audioEnabled: enabled }),
+
+  setFftVisible: (visible) => set({ fftVisible: visible }),
 
   toggleSlot: (slotId) => {
     pushHistory(get, set)
