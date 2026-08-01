@@ -14,27 +14,18 @@ const firaCode = Fira_Code({
   variable: "--font-sans",
 })
 
+/** Favicon: `public/icon-hydra-4.svg` (+ `app/icon.svg` para Next). Probar otras: `-1`…`-3` en la URL. */
+const APP_ICON_PATH = "/icon-hydra-4.svg?v=5"
+
 export const metadata: Metadata = {
   title: "HYDRA - Live Coding Video Synthesizer",
   description:
     "Interactive documentation for Hydra, a live-coding video synthesizer by Olivia Jack. Explore real-time visual synthesis with modular functions.",
   generator: "v0.app",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: [{ url: APP_ICON_PATH, type: "image/svg+xml" }],
+    apple: APP_ICON_PATH,
+    shortcut: APP_ICON_PATH,
   },
 }
 
