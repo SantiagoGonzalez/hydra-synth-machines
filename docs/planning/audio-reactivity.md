@@ -1,6 +1,6 @@
 # Audio reactivo — exploración e integración
 
-> Estado: **planificación / spike**. Hydra **sí soporta** audio reactivo vía micrófono; el launchpad **no lo tiene habilitado** hoy.
+> Estado: **MVP hecho (2026-07-31)** — J-01 + J-02 + J-03. Mic opt-in, `a` en whitelist, modo ♪ en params. Pendiente: teardown de stream (J-04), panel global bins/scale/smooth (J-04), sync FFT a proyección (J-05).
 
 Referencias:
 - [Hydra — audio](https://hydra.ojack.xyz/docs/docs/learning/interactivity/audio)
@@ -59,14 +59,16 @@ Equivalente mental al modo **fn(time)** que ya tiene el launchpad — pero la fu
 
 | Pieza | Estado |
 |-------|--------|
-| `chain-evaluator.ts` | `detectAudio: false` |
-| `buildBoundFunctions` | **No expone** `a` |
-| `hydra-playground.tsx` | `detectAudio: false` |
-| `ParamValue` | `number` \| `fn(time)` — **sin modo audio** |
-| `chain-compiler` | Emite `({time}) => ...` para fn; no emite `a.fft` |
-| UI launchpad | Sin toggle mic, sin controles `setBins` / `setScale` |
+| `chain-evaluator.ts` | Lazy `_initAudio()` + `detectAudio` mutable vía `setAudioEnabled` / `setFftVisible` (**hecho**) |
+| `buildBoundFunctions` | Expone `a: s.a` (**hecho**) |
+| `hydra-playground.tsx` | Sigue `detectAudio: false` (solo launchpad en v1) |
+| `ParamValue` | `number` \| `fn(time)` \| `audio { bin, scale, offset }` (**hecho**) |
+| `emitParamExpression` | Emite `() => (a && a.fft && a.fft[i] != null ? a.fft[i] : 0) * s + o` (**hecho**) |
+| UI launchpad | Toggle Mic + FFT (`audio-controls.tsx`); modo ♪ en `param-slider` (**hecho**) |
+| Panel global bins/scale/smooth | Pendiente **J-04** |
+| Teardown de stream al apagar mic | Pendiente (**limitación conocida**): solo `detectAudio=false` + `hide()` |
 
-**Conclusión:** el motor lo trae; falta **encenderlo**, **exponerlo al evaluador** y **modelarlo en pads** (o código).
+**Conclusión:** MVP audio cerrado. Calibración en vivo (J-04), sync proyección (J-05) y system audio (J-06) siguen abiertos.
 
 ---
 
@@ -230,19 +232,19 @@ D-03         →  J-05 cuando exista proyección
 
 ## Criterios de aceptación (MVP audio)
 
-1. Usuario activa mic; `osc(10,0, () => a.fft[0]*4).out()` reacciona en el canvas.
-2. Al menos un param de pad puede conmutarse a modo **audio** y compilar correctamente.
-3. Desactivar mic libera stream / oculta meter.
-4. Documentado: solo mic en v1; system audio = investigación.
+1. ~~Usuario activa mic; `osc(10,0, () => a.fft[0]*4).out()` reacciona en el canvas.~~ **Hecho** (J-01/J-02).
+2. ~~Al menos un param de pad puede conmutarse a modo **audio** y compilar correctamente.~~ **Hecho** (J-03).
+3. Desactivar mic oculta meter (`hide`); **libera stream** — **parcial** (teardown pendiente → J-04).
+4. ~~Documentado: solo mic en v1; system audio = investigación.~~ **Hecho** (decisión #10).
 
 ---
 
-## Decisiones abiertas
+## Decisiones (cerradas 2026-07-31)
 
-1. ¿Audio on por defecto o opt-in estricto?
-2. ¿Cuántos bins por defecto? (Hydra usa 4; UI de 6–8 bandas tipo ecualizador)
-3. ¿Modo audio en params secundarios (modulate source) o solo main?
-4. ¿v1 solo launchpad o también playground de aprendizaje?
+1. Audio **opt-in estricto** (default off) — decisión #10.
+2. Bins default **4** (coincide con `numBins` de `_initAudio`); UI de más bandas = J-04.
+3. Modo ♪ disponible en params main (y secondary vía el mismo `ParamValue`); atajo teclado sigue `#`↔`fn` (♪ solo UI en v1).
+4. v1 = **solo launchpad**; playground de aprendizaje queda con `detectAudio: false`.
 
 ---
 

@@ -1,31 +1,36 @@
 # Guía día a día — flujo plan → execute
 
-> Cómo usar `hydra-planner` e `hydra-implementer` en Cursor.  
+> Cómo usar los agentes `hydra-*` en Cursor.  
 > Índice de tareas: [`README.md`](./README.md)
 
 ---
 
 ## En 30 segundos
 
-**Flujo manual (máximo control):**
+**Intake (cualquier momento — chat corto, Composer):**
 ```
-1. Chat A + /hydra-planner  →  tasks/todo.md
-2. Chat B + /hydra-implementer  →  Bloque 1 → commit
-3. Chat C (nuevo)  →  Bloque 2 → commit
-4. /hydra-reviewer  →  informe final
+/hydra-backloger  →  filas en backlog.md
 ```
 
-**Flujo completo (oleada nueva):**
+**Flujo orquestado (recomendado — 1 chat pinneado):**
 ```
-0. /hydra-prioritizer  →  priorizacion.md   (Fable, poco frecuente)
-1. /hydra-planner      →  todo.md           (Opus, Plan)
-2. /hydra-implementer  →  oleada o bloques  (Composer)
-3. /hydra-reviewer     →  informe           (Opus)
+/hydra-orchestrator
+  → prioritizer (si hace falta) → GATE
+  → planner → GATE
+  → implementer (oleada) → reviewer
 ```
 
-**Si priorizacion.md ya está vigente:** saltá el paso 0.
+**Flujo manual (máximo control, más chats):**
+```
+0. /hydra-prioritizer  →  priorizacion.md
+1. /hydra-planner      →  todo.md
+2. /hydra-implementer  →  oleada o bloques
+3. /hydra-reviewer     →  informe
+```
 
-**Regla de oro:** el plan vive en `todo.md`, no en el historial del chat.
+**No uses multitask** para el pipeline: es secuencial (cada paso necesita el `.md` del anterior).
+
+**Regla de oro:** el plan vive en `todo.md`; el chat orquestador solo coordina. Feedback de uso → backloger, no mezclar en implementer.
 
 ---
 
@@ -36,22 +41,26 @@
 En el input del Agent, escribí:
 
 ```
-/hydra-prioritizer
+/hydra-backloger
 ```
 
-o
+```
+/hydra-orchestrator
+```
+
+o, si preferís paso a paso:
+
+```
+/hydra-prioritizer
+```
 
 ```
 /hydra-planner
 ```
 
-o
-
 ```
 /hydra-implementer
 ```
-
-o
 
 ```
 /hydra-reviewer
@@ -83,13 +92,23 @@ La opción A es la más rápida una vez que te acostumbrás.
 
 ## Setup por sesión
 
-| Paso | Prioritizer | Planner | Implementer | Reviewer |
-|------|-------------|---------|-------------|----------|
-| **Modo** | Agent | **Plan** | **Agent** | **Agent** |
-| **Modelo** | Fable / Sonnet | Opus / Fable | Composer | Opus (readonly) |
-| **Frecuencia** | Oleada / backlog cambió | Cada sesión | Por bloque u oleada | Post-oleada |
-| **Output** | `priorizacion.md` | `todo.md` | commits | informe |
-| **Chat** | Dedicado | Dedicado | 1 bloque u oleada | Nuevo post-impl |
+| Rol | Subagent | Modelo | Chat |
+|-----|----------|--------|------|
+| Intake | `hydra-backloger` | **Composer** | Chat corto ad-hoc (cualquier momento) |
+| ★ Orquestar | `hydra-orchestrator` | Composer | **1 chat pinneado / oleada** |
+| Priorizar | `hydra-prioritizer` | **Sonnet** | Via orquestador (o chat dedicado) |
+| Planificar | `hydra-planner` | **Opus** | Via orquestador (o chat dedicado) |
+| Implementar | `hydra-implementer` | Composer | Via orquestador (oleada) |
+| Revisar | `hydra-reviewer` | **Sonnet** | Via orquestador (al final) |
+
+**Costo:** Sonnet → Opus → Fable (más caro). Fable es techo/frontera (~2× Opus); **no** usarlo para “abaratar”. Deep review → Opus (o Fable si lo pedís).
+
+### Menos ruido en el historial
+
+1. Un chat: `/hydra-orchestrator` → renombrá `Oleada YYYY-MM-DD · [foco]` → **pin**.
+2. Los subagents corren debajo; no abras un chat nuevo por cada rol.
+3. Buscá estado en `tasks/*.md`, no scrolleando chats viejos.
+4. Al cerrar oleada: unpin; el siguiente día = chat nuevo con mismo patrón.
 
 ### Atajos útiles
 
@@ -106,10 +125,86 @@ La opción A es la más rápida una vez que te acostumbrás.
 
 ## Rutina diaria
 
-### Priorización (oleada nueva o backlog cambió)
+### Opción recomendada — orquestador (1 chat)
+
+1. **Chat nuevo** → Agent → Composer (o default del orquestador)
+2. Renombrá / pin: `Oleada YYYY-MM-DD · Fase 0`
+3. Pegá:
+
+```
+/hydra-orchestrator
+
+Oleada: Fase 0, meta bloques 1–4.
+priorizacion.md [vigente | re-priorizar].
+Crear branch oleada/2026-07-31-fase-0.
+Gates ON. Implementación en oleada. Review al final. Merge a main solo si digo merge OK.
+```
+
+4. En cada **GATE**: revisá el `.md` y respondé `sí` / ajustes.
+5. Al final: leé el informe del reviewer. Fixes críticos → mismo chat o re-delegar implementer.
+
+`full auto` / `sin gates` saltea pausas (sigue secuencial; no es multitask). **Nunca** saltea el gate de merge a `main`.
+
+---
+
+## Git por oleada
+
+Una oleada = un branch. Todo el trabajo vive ahí hasta el merge.
+
+```
+prioritizer  →  git checkout -b oleada/2026-07-31-fase-0
+planner      →  commit chore(tasks): plan sesión (opcional)
+implementer  →  un commit por bloque (código)
+reviewer     →  commit tasks/ si falta + merge a main (solo con tu OK)
+```
+
+### Naming
+
+| Bien | Mal |
+|------|-----|
+| `oleada/2026-07-31-fase-0` | `Oleada-2026-07-31-Fase 0` (espacios) |
+
+El branch se registra en `priorizacion.md` → campo `**Branch:**`.
+
+### Gates git
+
+| Acción | Quién | Gate |
+|--------|-------|------|
+| Crear branch | prioritizer | inicio oleada |
+| Commits de código | implementer | automático en branch |
+| Merge a `main` | reviewer | **vos decís `merge OK`** |
+| `git push` | cualquiera | **solo si lo pedís** |
+
+**Nunca** force push a `main`.
+
+### Prompt prioritizer con branch
+
+```
+/hydra-prioritizer
+
+@tasks/backlog.md @tasks/lessons.md
+
+Oleada Fase 0. Creá branch oleada/2026-07-31-fase-0.
+Actualizá priorizacion.md con **Branch:**. No todo.md.
+```
+
+### Prompt reviewer con merge
+
+```
+/hydra-reviewer
+
+@tasks/todo.md
+
+Revisá bloques 1–4. Informe primero.
+Si aprobado y te digo merge OK: merge oleada/2026-07-31-fase-0 → main --no-ff.
+```
+
+---
+
+### Priorización manual (sin orquestador)
 
 1. Revisá si `priorizacion.md` tiene fecha reciente y refleja lo que querés hacer.
-2. Si no → **chat nuevo** → Agent → Fable:
+2. Si no → **chat nuevo** → Agent → **Sonnet**:
 ```
 /hydra-prioritizer
 
@@ -124,7 +219,7 @@ Meta conservadora si no especifico tiempo.
 ### Mañana o inicio de sesión de trabajo (5–15 min)
 
 1. Abrí `tasks/priorizacion.md` — ¿qué bloques son hoy?
-2. **Chat nuevo** → Plan mode → Opus/Fable
+2. **Chat nuevo** → Plan mode → **Opus**
 3. Pegá:
 
 ```
@@ -171,7 +266,7 @@ Si hay escalación, pará la oleada. Al terminar, avisame para /hydra-reviewer.
 
 ### Review final (post-oleada o post-sesión)
 
-1. **Chat nuevo** → Opus → Agent
+1. **Chat nuevo** → **Sonnet** → Agent (default). Opus/Fable solo si pedís *deep review*.
 2. Pegá:
 
 ```
@@ -194,6 +289,38 @@ Commits de la sesión, criterios de hecho, regresiones. Informe; no fixes salvo 
 ---
 
 ## Prompts copy-paste
+
+### Backloger — feedback de uso
+
+```
+/hydra-backloger
+
+@tasks/backlog.md
+
+Al probar hoy noté:
+- [bug / fricción / idea 1]
+- [idea 2]
+
+Agregá al backlog con IDs nuevos. Si hay duplicado, avisá. No priorices.
+```
+
+### Orchestrator — oleada completa
+
+```
+/hydra-orchestrator
+
+Oleada: Fase 0, meta bloques 1–4.
+priorizacion.md vigente (saltear prioritizer si la fecha es de hoy).
+Gates ON. Oleada implementer. Review al final.
+```
+
+### Orchestrator — full auto (menos fricción)
+
+```
+/hydra-orchestrator
+
+Bloques 1–4. priorizacion vigente. full auto. Oleada + review.
+```
 
 ### Prioritizer — oleada estándar
 
@@ -291,8 +418,11 @@ Usá planner en el **mismo chat de plan** o uno nuevo; no sigas con implementer 
 
 | Situación | Qué hacer |
 |-----------|-----------|
-| Empezás oleada / backlog creció | `/hydra-prioritizer` → `priorizacion.md` |
-| `priorizacion.md` vigente de hoy | Saltá prioritizer → `/hydra-planner` |
+| Feedback / bug al probar | `/hydra-backloger` (Composer, chat corto) |
+| Día de trabajo normal | `/hydra-orchestrator` (1 chat pinneado) |
+| Empezás oleada / backlog creció | Orquestador con `re-priorizar` o `/hydra-prioritizer` |
+| `priorizacion.md` vigente | Orquestador saltea prioritizer, o `/hydra-planner` |
+| Historial lleno de chats | Orquestador + pin; no un chat por rol |
 | "¿Qué hago hoy?" | `priorizacion.md` o prioritizer si está viejo |
 | Fix chico, 1 archivo, obvio | Agent directo (sin planner) — **excepción** |
 | Feature 3+ pasos o decisión de arquitectura | **Siempre** planner primero |
@@ -308,40 +438,39 @@ Usá planner en el **mismo chat de plan** o uno nuevo; no sigas con implementer 
 ## Diagrama del flujo
 
 ```
-  priorizacion.md          backlog.md
-        │                       │
-        └──────────┬────────────┘
-                   ▼
-         ┌─────────────────┐
-         │  CHAT PLAN      │
-         │  /hydra-planner │
-         │  Opus + Plan    │
-         └────────┬────────┘
-                  │ escribe
-                  ▼
-           tasks/todo.md  ◄── contrato entre sesiones
-                  │
-     ┌────────────┼────────────┐
-     ▼            ▼            ▼
-  CHAT B1      CHAT B2      CHAT B3
-  Bloque 1     Bloque 2     Bloque 3
-  Composer     Composer     Composer
-     │            │            │
-     ▼            ▼            ▼
-  commit       commit       commit
-     │            │            │
-     └────────────┴────────────┘
-                  ▼
-         backlog.md + lessons.md
+  feedback de uso ──► /hydra-backloger ──► backlog.md
+                                              │
+              ┌───────────────────────────────┘
+              ▼
+              ┌──────────────────────────────────┐
+              │  CHAT MAIN (pin)                 │
+              │  /hydra-orchestrator            │
+              │  Composer — solo coordina        │
+              └────────────┬─────────────────────┘
+                           │ secuencial (no multitask)
+     ┌─────────────────────┼─────────────────────┐
+     ▼                     ▼                     ▼
+ prioritizer            planner            implementer
+ priorizacion.md        todo.md            commits
+     │                     │                     │
+     └──────── GATE ───────┘                     │
+                           └────── GATE ─────────┘
+                                                 ▼
+                                            reviewer
+                                            informe
 ```
+
+Alternativa manual: chats separados por rol (más control, más ruido en historial).
 
 ---
 
 ## Tips & tricks
 
-### 1. Chat nuevo = contexto limpio
+### 1. Un chat orquestado ≠ 4 chats sueltos
 
-No implementes 4 bloques en el mismo chat. A los 2–3 bloques el agente empieza a mezclar archivos y a "re-planificar".
+Preferí `/hydra-orchestrator` pinneado por oleada. Los subagents aíslan contexto; el main solo resume. Evitá un chat nuevo por cada `/hydra-*` — llena el historial.
+
+Excepción: si la oleada se pone pesada o hay escalación, abrí un chat solo para el bloque problemático.
 
 ### 2. El plan es el jefe
 
@@ -439,6 +568,8 @@ Si el bloque toca síntesis, el implementer debe leer `docs/hydra-skills-index/`
 
 | Recurso | Path |
 |---------|------|
+| Subagent backloger | `.cursor/agents/hydra-backloger.md` |
+| Subagent orchestrator | `.cursor/agents/hydra-orchestrator.md` |
 | Subagent prioritizer | `.cursor/agents/hydra-prioritizer.md` |
 | Subagent planner | `.cursor/agents/hydra-planner.md` |
 | Subagent implementer | `.cursor/agents/hydra-implementer.md` |
@@ -453,4 +584,4 @@ Si el bloque toca síntesis, el implementer debe leer `docs/hydra-skills-index/`
 
 ## Próximo paso sugerido
 
-Abrí un chat en **Plan mode** y ejecutá el prompt "Planner — sesión estándar" de arriba sobre tus bloques 1–4. Cuando `todo.md` te cierre, arrancá implementación con Bloque 1 en un **chat nuevo**.
+Abrí un chat Agent, renombrá `Oleada YYYY-MM-DD · Fase 0`, pinealo y corré el prompt **Orchestrator — oleada completa**. Aprobá en cada GATE.

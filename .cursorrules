@@ -30,12 +30,17 @@
 
 ## Task Management
 
-0. **Prioritize** (oleada / backlog cambió): `hydra-prioritizer` (Fable) → `tasks/priorizacion.md`. Sin código.
-1. **Plan First**: `hydra-planner` (Plan, Opus) → `tasks/todo.md` con Decisión/Descartado/Riesgos. Asume `priorizacion.md` vigente.
-2. **Execute**: `hydra-implementer` (Composer) — un bloque/chat u oleada secuencial con commits entre medio.
-3. **Review**: `hydra-reviewer` (Opus, readonly) — post-oleada.
-4. **Track Progress**: Mark items in `todo.md` / `backlog.md`
-5. **Capture Lessons**: `tasks/lessons.md` after corrections
+- **Intake** (ad-hoc): `hydra-backloger` (Composer) → filas en `tasks/backlog.md` desde feedback de uso. Cualquier momento; no es paso del orquestador.
+0. **Orchestrate** (opcional): `hydra-orchestrator` — un chat pinneado por oleada; delega en secuencia (no multitask) con gates.
+1. **Prioritize** (oleada / backlog cambió): `hydra-prioritizer` (**Sonnet**) → `tasks/priorizacion.md`. Sin código.
+2. **Plan First**: `hydra-planner` (Plan, **Opus**) → `tasks/todo.md` con Decisión/Descartado/Riesgos. Asume `priorizacion.md` vigente.
+3. **Execute**: `hydra-implementer` (Composer) — un bloque/chat u oleada secuencial con commits entre medio.
+4. **Review**: `hydra-reviewer` (Sonnet; Opus/Fable si deep review) — post-oleada; merge a `main` solo con tu OK explícito.
+5. **Git oleada**: prioritizer crea `oleada/YYYY-MM-DD-foco`; planner/implementer commitean en branch; reviewer mergea tras gate.
+6. **Track Progress**: Mark items in `todo.md` / `backlog.md`
+7. **Capture Lessons**: `tasks/lessons.md` after corrections
+
+Costo: Composer/Sonnet → Opus → Fable (más caro). Fable no es “barato”.
 
 Detalle: `tasks/README.md` · regla `.cursor/rules/tasks-workflow.mdc`
 
