@@ -1,0 +1,45 @@
+---
+description: Flujo prioritize → plan → execute → review (hydra-*)
+alwaysApply: true
+---
+
+# Tasks workflow
+
+## Pipeline
+
+```
+feedback → backloger → backlog.md → prioritizer → priorizacion.md → planner → todo.md → implementer → reviewer
+```
+
+- **Backloger:** ad-hoc (cualquier momento); no es paso fijo del orquestador.
+- Chat único (opcional): `/hydra-orchestrator` delega prioritize→…→review **en secuencia** (no multitask).
+
+## Subagents
+
+| Rol | Subagent | Modelo | Frecuencia | Output |
+|-----|----------|--------|------------|--------|
+| Intake | `hydra-backloger` | **Composer** | Ad-hoc (feedback uso) | filas en `backlog.md` |
+| Orquestar | `hydra-orchestrator` | Composer | 1 chat / oleada | coordina + gates |
+| Priorizar | `hydra-prioritizer` | **Sonnet** thinking | Oleada / backlog cambió | `priorizacion.md` |
+| Planificar | `hydra-planner` | **Opus** | Cada sesión de trabajo | `todo.md` |
+| Implementar | `hydra-implementer` | Composer | Por bloque u oleada | código + commits |
+| Revisar | `hydra-reviewer` | **Sonnet** | Post-oleada | informe + merge (gate) |
+
+Invocación: `/hydra-backloger`, `/hydra-orchestrator`, `/hydra-prioritizer`, `/hydra-planner`, `/hydra-implementer`, `/hydra-reviewer`.
+
+## Costo de modelos
+
+Composer / Sonnet → Opus → Fable (más caro). Fable es techo/frontera, **no** la opción barata. Deep review o arquitectura: Opus (o Fable si el usuario lo pide).
+
+## Contrato
+
+- Backloger: solo `backlog.md` (+ lessons si patrón); no prioriza ni planifica.
+- Orquestador: un chat pinneado; delega secuencial; gates tras priorizar/planificar salvo `full auto`.
+- Prioritizer: estrategia; sin grep pesado; no `todo.md`.
+- Planner: asume `priorizacion.md` vigente; Decisión/Descartado/Riesgos en `todo.md`.
+- Implementer oleada: secuencial, **commit entre bloques**, parar si escalación.
+- Reviewer: informe; `commitea todo` / `commitea todo y mergea` cierra git. Merge a `main` **siempre** con permiso (`merge OK`); `full auto` no saltea merge.
+- Git: `checkout -b` sin permiso; commits en branch; no force push.
+- **No** multitask del pipeline completo.
+
+Guía: `tasks/guia-flujo-agentes.md`

@@ -2,7 +2,7 @@
 
 - Modelos Claude en Cursor: **Composer/Sonnet → Opus → Fable** (más caro). Fable es techo/frontera, no la opción “barata”.
 - Feedback de uso mid-flujo → `/hydra-backloger` (Composer), no mezclar intake en el chat del implementer ni re-priorizar la oleada en curso salvo pedido.
-- Branch de oleada: `oleada/YYYY-MM-DD-foco` (kebab-case, sin espacios). Merge a `main` solo con gate explícito del usuario; nunca force push.
+- Branch de oleada: `oleada/YYYY-MM-DD-foco` (kebab-case, sin espacios). `checkout -b` sin permiso; merge a `main` **siempre** con `merge OK` / `commitea todo y mergea`. Cierre: reviewer con `commitea todo` si el working tree quedó sucio.
 - When a compiler orders pads by `activatedAt`, staging must assign an explicit order to draft pads; array insertion alone does not determine the emitted chain.
 - Every Hydra canvas must render an initial safe frame so its WebGL framebuffers are initialized before they are presented.
 - Registry `id` must exist in hydra-synth or be expanded in `chain-compiler.ts` before emit (ej. `modulateScroll` → `modulateScrollX` + `modulateScrollY`). Ver `docs/planning/hydra-registry-gaps.md`.

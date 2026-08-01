@@ -2,7 +2,7 @@
 
 // Faders globales del launchpad: speed/bpm vía evaluador, brightness CSS, feedback en compilador
 
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { GLOBAL_FADERS } from "@/lib/global-faders"
 import { controlId } from "@/lib/launchpad-controls"
 import { useChainStore } from "@/stores/chain-store"
@@ -22,14 +22,36 @@ const FADER_TITLES: Partial<Record<(typeof GLOBAL_FADERS)[number]["id"], string>
   feedback: "Feedback — blend damping when chain uses src(oN); no effect without buffer feedback",
 }
 
+function formatFaderValue(value: number, step: number): string {
+  if (step >= 1) return String(Math.round(value))
+  return String(Math.round(value * 1000) / 1000)
+}
+
 function GlobalFader({ fader, value, onChange, controlId: id, isFocusActive }: GlobalFaderProps) {
   const pct = ((value - fader.min) / (fader.max - fader.min)) * 100
   const containerRef = useRef<HTMLDivElement>(null)
+  const cancelRef = useRef(false)
+  const [draft, setDraft] = useState<string | null>(null)
   const title = FADER_TITLES[fader.id]
+  const displayValue = formatFaderValue(value, fader.step)
 
   useEffect(() => {
     if (isFocusActive) containerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
   }, [isFocusActive])
+
+  const commitDraft = useCallback(() => {
+    if (cancelRef.current) {
+      cancelRef.current = false
+      return
+    }
+    if (draft === null) return
+    const parsed = Number(draft)
+    if (!Number.isNaN(parsed)) {
+      const clamped = Math.min(fader.max, Math.max(fader.min, parsed))
+      onChange(clamped)
+    }
+    setDraft(null)
+  }, [draft, fader.max, fader.min, onChange])
 
   return (
     <div
@@ -42,9 +64,27 @@ function GlobalFader({ fader, value, onChange, controlId: id, isFocusActive }: G
         <span className="font-mono text-[8px] text-white/25 uppercase tracking-wider shrink-0">
           {fader.label}
         </span>
-        <span className="font-mono text-[8px] text-white/30 tabular-nums">
-          {Math.round(value * 100) / 100}
-        </span>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={draft ?? displayValue}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              commitDraft()
+              ;(e.target as HTMLInputElement).blur()
+            }
+            if (e.key === "Escape") {
+              e.preventDefault()
+              cancelRef.current = true
+              setDraft(null)
+              ;(e.target as HTMLInputElement).blur()
+            }
+          }}
+          className="w-14 font-mono text-[11px] text-white/80 tabular-nums bg-white/5 border border-white/10 rounded px-1 py-0.5 text-right focus:outline-none focus:ring-1 focus:ring-white/30"
+        />
       </div>
       <div className="relative w-full h-1 bg-white/10 rounded-full">
         <div

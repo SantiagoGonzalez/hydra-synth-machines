@@ -35,8 +35,8 @@
 1. **Prioritize** (oleada / backlog cambió): `hydra-prioritizer` (**Sonnet**) → `tasks/priorizacion.md`. Sin código.
 2. **Plan First**: `hydra-planner` (Plan, **Opus**) → `tasks/todo.md` con Decisión/Descartado/Riesgos. Asume `priorizacion.md` vigente.
 3. **Execute**: `hydra-implementer` (Composer) — un bloque/chat u oleada secuencial con commits entre medio.
-4. **Review**: `hydra-reviewer` (Sonnet; Opus/Fable si deep review) — post-oleada; merge a `main` solo con tu OK explícito.
-5. **Git oleada**: prioritizer crea `oleada/YYYY-MM-DD-foco`; planner/implementer commitean en branch; reviewer mergea tras gate.
+4. **Review**: `hydra-reviewer` — informe; cierre con `commitea todo` / `commitea todo y mergea`. Merge a `main` **siempre** con OK explícito (`full auto` no lo saltea).
+5. **Git oleada**: `checkout -b` sin permiso; implementer commit por bloque; reviewer cierra pendientes + merge tras gate.
 6. **Track Progress**: Mark items in `todo.md` / `backlog.md`
 7. **Capture Lessons**: `tasks/lessons.md` after corrections
 

@@ -152,10 +152,10 @@ Gates ON. Implementación en oleada. Review al final. Merge a main solo si digo 
 Una oleada = un branch. Todo el trabajo vive ahí hasta el merge.
 
 ```
-prioritizer  →  git checkout -b oleada/2026-07-31-fase-0
-planner      →  commit chore(tasks): plan sesión (opcional)
-implementer  →  un commit por bloque (código)
-reviewer     →  commit tasks/ si falta + merge a main (solo con tu OK)
+prioritizer  →  git checkout -b oleada/…     (sin pedir permiso)
+planner      →  commit chore(tasks) opcional
+implementer  →  un commit por bloque          (obligatorio; si falla, para)
+reviewer     →  informe → "commitea todo" → GATE → merge
 ```
 
 ### Naming
@@ -166,16 +166,34 @@ reviewer     →  commit tasks/ si falta + merge a main (solo con tu OK)
 
 El branch se registra en `priorizacion.md` → campo `**Branch:**`.
 
-### Gates git
+### Gates git (qué pide permiso)
 
-| Acción | Quién | Gate |
-|--------|-------|------|
-| Crear branch | prioritizer | inicio oleada |
-| Commits de código | implementer | automático en branch |
-| Merge a `main` | reviewer | **vos decís `merge OK`** |
-| `git push` | cualquiera | **solo si lo pedís** |
+| Acción | ¿Pide OK? | Notas |
+|--------|-----------|--------|
+| `checkout -b` | **No** | Cómodo al inicio de oleada |
+| Commits en el branch | **No** (implementer / `commitea todo`) | En el branch de oleada |
+| Merge a `main` | **Sí, siempre** | Ni `full auto` lo saltea |
+| Resolver conflictos | **Sí** | Reviewer para y pregunta |
+| `git push` | **Sí** | Solo si lo pedís |
 
-**Nunca** force push a `main`.
+### Cerrar oleada (frases mágicas al reviewer)
+
+Después del informe (o en el mismo chat):
+
+```
+commitea todo
+```
+→ commits de **todo** lo pendiente en el branch (por bloque si se puede; si no, commits agrupados). Luego te pide merge.
+
+```
+commitea todo y mergea
+```
+o
+
+```
+merge OK
+```
+→ commits pendientes + merge a `main` (esa frase = permiso de merge).
 
 ### Prompt prioritizer con branch
 
@@ -188,15 +206,25 @@ Oleada Fase 0. Creá branch oleada/2026-07-31-fase-0.
 Actualizá priorizacion.md con **Branch:**. No todo.md.
 ```
 
-### Prompt reviewer con merge
+### Prompt reviewer — review + cierre
 
 ```
 /hydra-reviewer
 
 @tasks/todo.md
 
-Revisá bloques 1–4. Informe primero.
-Si aprobado y te digo merge OK: merge oleada/2026-07-31-fase-0 → main --no-ff.
+Revisá la oleada. Informe primero.
+Si working tree sucio o quiero cerrar: esperá a que diga
+"commitea todo" o "commitea todo y mergea".
+```
+
+### Prompt reviewer — solo cierre (ya revisaste)
+
+```
+/hydra-reviewer
+
+commitea todo y mergea
+Branch en priorizacion.md. Working tree → commits → merge a main --no-ff.
 ```
 
 ---

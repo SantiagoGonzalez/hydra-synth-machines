@@ -123,9 +123,18 @@ Modo oleada: Bloques 1–4 en orden. Commit entre cada uno. Parar si escalación
 
 @tasks/todo.md
 
-Revisá bloques implementados. Informe primero.
-Merge a main solo si digo merge OK.
+Revisá la oleada. Informe primero.
 ```
+
+Cierre git (después del informe):
+
+```
+commitea todo                  → commits pendientes en el branch
+commitea todo y mergea         → commits + merge (permiso incluido)
+merge OK                       → merge si ya está limpio
+```
+
+Merge a `main` **siempre** pide permiso; `checkout -b` no.
 
 ### Archivar planes (opcional)
 
