@@ -1,6 +1,6 @@
 # Backlog launchpad — v0
 
-> Última actualización: 2026-07-31 (oleada bloques 1–6).
+> Última actualización: 2026-07-31 (intake feedback post-G-10).
 
 ## Leyenda
 
@@ -21,6 +21,8 @@
 | ---- | --------------------------------------- | ------------- | -------- | --------- | ------------------------------------------------------------------------ |
 | A-01 | `Z` → `F` para modo función             | **cancelled** | —        | —         | Descartado: clash con pad posicional `KeyF` (#12). **Mantener** `Z`**.** |
 | A-02 | Desactivar pad en cadena (panel params) | done          | S–M      | Alta      | Hints bypass (B) y remove (⇧⌫); atajo real = Shift+Backspace.            |
+| A-03 | Atajo **Clear all**                     | idea          | S        | Media     | Hoy solo botón en `pad-band`; origen: feedback 2026-07-31.               |
+| A-04 | Insertar pad en posición del cursor     | idea          | M        | Alta      | Explorar cadena con foco → insertar pad armado en índice (no append). Propuesta: Ctrl+Shift+Q. Quedan pocos modificadores libres; spike atajos antes de implementar. |
 
 
 ---
@@ -52,7 +54,8 @@
 | C-03 | Overlay código sobre canvas            | idea   | S–M      | Media      | Toggle CSS; reutilizar `chain-preview`.              |
 | C-04 | Undo/redo cadena (Ctrl+Z/Y, 5 niveles) | done   | M        | Alta       | Store + UI Ctrl/Cmd+Z y Ctrl/Cmd+Y (o ⇧Z).           |
 | C-05 | Copy/paste en ChainPreview             | done   | S–M      | Alta       | Copy en compact + Ctrl/Cmd+C en zona chain (fase 0). |
-
+| C-06 | Persistencia chain en localStorage     | idea   | S–M      | Media      | Auto-save sesión (complemento favoritos). Evaluar tradeoffs: tamaño JSON multi-output, debounce, corrupción, sync con undo. Patrón `favorites-store` (zustand persist). |
+| C-07 | Preview lazy en modal favoritos        | idea   | M        | Media      | Hoy `HydraThumbnail` = img estática o texto de código. Pedido: preview visual de cada cadena (lazy eval Hydra al abrir/hover). Tradeoffs: N instancias WebGL, memoria, tiempo de apertura. |
 
 
 
@@ -121,6 +124,7 @@
 | ---- | -------------------------- | ------ | -------- | --------- | -------------------------------------------------- |
 | E-01 | Rediseño botones pad       | idea   | S–M      | Media     | Label centrado; función más grande; fn en esquina. |
 | E-02 | Consistencia design system | idea   | M        | Media     | Depende de B-02.                                   |
+| E-03 | Tabs categoría pads legibles| idea   | S        | Media     | `pad-tab-bar`: texto pequeño (9px), discoverability baja. Colores y números OK; evaluar tamaño, labels, contraste. Origen: feedback 2026-07-31. |
 
 
 ---
@@ -143,12 +147,30 @@
 | G-07 | RGB: HEX + color picker + sliders           | done   | M        | Alta      | Conviven las 3 vías; `solid` + `color`. Ver planning doc.                                                                                                                                                                                                                                                             |
 | G-08 | Spike: color por **swatches / paleta**      | done   | S        | Media     | Spike cerrado 2026-07-31: **go grid custom** (0 KB). Ver `param-panel-redesign.md` §G-08. Impl → **G-10**. |
 | G-09 | Perf del color picker nativo                | done   | S        | Media     | Fix 2026-07-31: `updateParams` atómico — compile por evento picker 3×→1× (medido con script store). rAF no necesario. |
-| G-10 | Swatches de color (grid custom)             | idea   | S        | Media     | Post-spike G-08: paleta fija VJ 4×4 en `rgb-color-control`; `hexToRgb` + `updateParams`. Sin deps. |
+| G-10 | Swatches de color (grid custom)             | done   | S        | Media     | 2026-07-31: 5 tabs (4 cromáticos + grises), 12 swatches/tab; sin picker nativo. `lib/color-palettes.ts` + `color-swatch-grid.tsx`. |
+| G-11 | Curar paleta swatch (colores VJ)            | idea   | S        | Media     | Post-G-10: wedges HSL genéricos poco usable; curar colores o paleta fija VJ. Origen: feedback 2026-07-31. |
+| G-12 | Discoverability tabs de paleta              | idea   | S        | Media     | Labels `R–N`/`A–V` difíciles de leer/entender; mejorar tipografía, labels completos o tooltips. Origen: feedback 2026-07-31. |
+| G-13 | Randomizer + reset de color                 | idea   | S        | Media     | Botones en bloque color: random (r,g,b) + reset a defaults del pad. Complementan swatches. Origen: feedback 2026-07-31. |
+| G-14 | Spike: swatches para **gradient**           | idea   | S        | Baja      | ¿Aplicable? `gradient` hoy solo `speed` en registry; color interno al shader Hydra. Evaluar tradeoffs vs extender API/color stops. Origen: feedback 2026-07-31. |
 
 
 **Mantener sin cambiar:** `source-selector.tsx` (referencia de claridad).
 
 **Feedback oleada G-07 (2026-07-31):** picker nativo aceptable como primer approach; siguiente iteración orientada a **swatches** (G-08) + investigar **perf** del nativo (G-09).
+
+**Feedback post-G-10 (2026-07-31):** polish swatches → G-11–G-13; gradient swatches → spike G-14.
+
+### G-14 — Spike swatches para gradient (tradeoffs)
+
+**Estado hoy:** `gradient` en registry solo expone `speed`; el color del gradiente es interno al shader Hydra (no `colorInput`).
+
+| Opción | Pros | Contras |
+|--------|------|---------|
+| **No aplicar swatches** | Cero trabajo; Hydra gradient es procedural animado | Usuario no elige colores del gradiente |
+| **Extender registry** (params r/g/b o stops) | Reutiliza `RgbColorControl` / swatches | ¿Hydra `gradient()` acepta color args? Verificar API oficial antes de inventar |
+| **Swatches como preset de `solid`+blend** | No toca gradient | No es gradient real |
+
+**Criterio spike:** documentar API Hydra + recomendación go/no-go; si go, definir si es v2 registry o workaround.
 
 ---
 
@@ -183,7 +205,7 @@
 | J-03 | Modo **audio** en `ParamValue` + compilador + UI ♪ | done   | M        | Alta      | Paralelo a `fn(time)`; emite `() => a.fft[i]*scale`. |
 | J-04 | Panel global audio (bins, scale, smooth, cutoff)   | idea   | S–M      | Media     | Mismo patrón que cablear globals (Epic H).           |
 | J-05 | Sync FFT a ventana proyección                      | idea   | M        | Media     | Depende D-03; ver estrategias en planning doc.       |
-| J-06 | Spike audio de sistema / OSC                       | idea   | L        | Baja      | Mic only en v1; loopback = investigación.            |
+| J-06 | Spike audio de sistema / OSC                       | idea   | L        | Media     | **v1 = solo mic.** Pregunta uso: (1) audio de **pestaña del navegador** → posible vía `getDisplayMedia` + audio (Chrome tab capture; UX rara). (2) **Otros programas locales** (DAW, Spotify) → **no** en browser puro; requiere loopback OS (BlackHole, VB-Audio) o Electron/Tauri. Documentar en spike; ver `audio-reactivity.md` Nivel 4. Origen: feedback 2026-07-31. |
 | J-07 | Beat trigger (`onBeat`)                            | idea   | M        | Baja      | API interna Meyda; no documentada en Hydra UI.       |
 
 
@@ -256,14 +278,14 @@
 | ID   | Ítem                                       | Estado | Esfuerzo | Prioridad | Notas                                                 |
 | ---- | ------------------------------------------ | ------ | -------- | --------- | ----------------------------------------------------- |
 | I-01 | `.gitignore`: sacar docs y skills del repo | idea   | M        | Media     | Repo = solo código app. Ver alcance abajo.            |
-| I-02 | Favicon e iconos originales                | idea   | S        | Media     | Reemplazar assets v0 en `public/` + `app/layout.tsx`. |
+| I-02 | Favicon e iconos originales                | done   | S        | Media     | 2026-07-31: `icon-hydra-3.svg` activo (swap a `-2` en `app/layout.tsx`). Assets v0 PNG reemplazados en metadata. |
 
 
 
 
 ### I-02 — Favicon
 
-**Hoy:** `public/icon.svg` + `icon-light/dark-32x32.png` + `apple-icon.png` — logo genérico v0.
+**Hoy:** `icon-hydra-3.svg` en `app/layout.tsx` (`APP_ICON_PATH`). Alternativas en `public/icon-hydra-2.svg`, `icon-hydra-1.svg`. `public/icon.svg` sincronizado con propuesta 3.
 
 **Entregable:**
 
@@ -324,7 +346,7 @@
 - [x] H-03 (bpm)
 - [x] C-04 (store + UI Ctrl+Z)
 - [x] **C-05** copy en ChainPreview (compact + selección)
-- [ ] **I-02** favicon original
+- [x] **I-02** favicon original (`icon-hydra-3`; probar `-2` en layout)
 - [x] B-01 tooltips (subset)
 
 
@@ -334,7 +356,7 @@
 - [x] G-07 HEX + picker + sliders (`solid`, `color`)
 - [x] G-08 spike swatches / paleta (lib ligera vs custom) — **go grid custom**
 - [x] G-09 perf color picker nativo (`updateParams` atómico, 3×→1× compile)
-- [ ] G-10 swatches grid custom (post-spike G-08)
+- [x] G-10 swatches grid custom (5 tabs × 12 colores)
 
 
 
@@ -411,6 +433,7 @@
 | 11  | K: ¿una escena activa o varias en paralelo?                      | Ver `scene-composition.md`   |
 | 12  | D-07 vs D-08: ¿PNG en Hydra o capa DOM primero?                  | —                            |
 | 13  | L: ¿drawer vs inline? ¿modulate dentro de subchain en v2?        | Ver `subchains.md`           |
+| 14  | J: ¿audio de pestaña del navegador en v2? ¿loopback OS fuera de scope? | Mic v1; tab capture vs app nativa — ver J-06 spike |
 
 
 ---
